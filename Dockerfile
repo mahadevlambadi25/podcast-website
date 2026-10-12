@@ -16,10 +16,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DOCKER_BUILD=1
 
-# Run database migrations before building the application
-RUN npx payload migrate
-
-# Run build
+# Run application build (database initialization & migrations run at runtime via CMD)
 RUN npm run build
 
 # Stage 4: Runner

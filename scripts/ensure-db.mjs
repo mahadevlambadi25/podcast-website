@@ -25,6 +25,12 @@ export async function ensureDatabase() {
   const rawUri = process.env.DATABASE_URI || 'file:./payload.db';
   const authToken = process.env.DATABASE_AUTH_TOKEN;
 
+  // PostgreSQL connections are handled natively by PostgreSQL/Payload adapters, not LibSQL
+  if (rawUri.startsWith('postgres://') || rawUri.startsWith('postgresql://')) {
+    console.log('==> PostgreSQL database detected. Schema and tables are managed by PostgreSQL/Payload runtime.');
+    return;
+  }
+
   let url = rawUri;
   if (rawUri.startsWith('file:')) {
     const rawPath = rawUri.slice(5);
