@@ -15,6 +15,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DOCKER_BUILD=1
+
+# Run database migrations before building the application
+RUN npx payload migrate
+
 # Run build
 RUN npm run build
 
