@@ -1,0 +1,942 @@
+{
+  "ddl": [
+    "CREATE TABLE audit_logs (\n      id INTEGER PRIMARY KEY AUTOINCREMENT,\n      user_id INTEGER,\n      user_email TEXT,\n      action TEXT NOT NULL,\n      entity TEXT NOT NULL,\n      entity_id TEXT,\n      details TEXT,\n      created_at TEXT NOT NULL\n    )",
+    "CREATE TABLE `contact_messages` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`email` text NOT NULL,\n\t`message` text NOT NULL,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n, `consent` integer DEFAULT true, `consent_timestamp` text, `email_delivery_failed` integer DEFAULT false)",
+    "CREATE TABLE `episodes` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`title` text NOT NULL,\n\t`slug` text NOT NULL,\n\t`youtube_url` text,\n\t`youtube_video_id` text,\n\t`fallback_watch_url` text,\n\t`short_summary` text NOT NULL,\n\t`description` text NOT NULL,\n\t`thumbnail_id` integer,\n\t`episode_number` numeric,\n\t`season` numeric,\n\t`published_at` text NOT NULL,\n\t`transcript` text,\n\t`featured` integer DEFAULT false,\n\t`status` text DEFAULT 'draft' NOT NULL,\n\t`seo_title` text,\n\t`seo_description` text,\n\t`canonical_override` text,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\tFOREIGN KEY (`thumbnail_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null\n)",
+    "CREATE TABLE `episodes_key_takeaways` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`takeaway` text NOT NULL,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `episodes_quotes` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`quote` text NOT NULL,\n\t`speaker` text,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `episodes_rels` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`order` integer,\n\t`parent_id` integer NOT NULL,\n\t`path` text NOT NULL,\n\t`guests_id` integer,\n\t`topics_id` integer,\n\tFOREIGN KEY (`parent_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`guests_id`) REFERENCES `guests`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`topics_id`) REFERENCES `topics`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `episodes_tags` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`tag` text NOT NULL,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `guests` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`full_name` text NOT NULL,\n\t`slug` text NOT NULL,\n\t`role` text NOT NULL,\n\t`company` text,\n\t`short_overview` text NOT NULL,\n\t`biography` text NOT NULL,\n\t`portrait_id` integer,\n\t`portrait_alt` text,\n\t`portrait_credit` text,\n\t`links_linkedin` text,\n\t`links_website` text,\n\t`links_other` text,\n\t`featured` integer DEFAULT false,\n\t`status` text DEFAULT 'draft' NOT NULL,\n\t`seo_title` text,\n\t`seo_description` text,\n\t`social_image_id` integer,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL, `canonical_override` text,\n\tFOREIGN KEY (`portrait_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`social_image_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null\n)",
+    "CREATE TABLE `guests_alternate_names` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `guests`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `guests_key_insights` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`quote` text NOT NULL,\n\t`context` text,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `guests`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `guests_rels` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`order` integer,\n\t`parent_id` integer NOT NULL,\n\t`path` text NOT NULL,\n\t`topics_id` integer,\n\tFOREIGN KEY (`parent_id`) REFERENCES `guests`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`topics_id`) REFERENCES `topics`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `media` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`alt` text NOT NULL,\n\t`caption` text,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`url` text,\n\t`thumbnail_u_r_l` text,\n\t`filename` text,\n\t`mime_type` text,\n\t`filesize` numeric,\n\t`width` numeric,\n\t`height` numeric,\n\t`focal_x` numeric,\n\t`focal_y` numeric,\n\t`sizes_thumbnail_url` text,\n\t`sizes_thumbnail_width` numeric,\n\t`sizes_thumbnail_height` numeric,\n\t`sizes_thumbnail_mime_type` text,\n\t`sizes_thumbnail_filesize` numeric,\n\t`sizes_thumbnail_filename` text,\n\t`sizes_portrait_url` text,\n\t`sizes_portrait_width` numeric,\n\t`sizes_portrait_height` numeric,\n\t`sizes_portrait_mime_type` text,\n\t`sizes_portrait_filesize` numeric,\n\t`sizes_portrait_filename` text,\n\t`sizes_og_url` text,\n\t`sizes_og_width` numeric,\n\t`sizes_og_height` numeric,\n\t`sizes_og_mime_type` text,\n\t`sizes_og_filesize` numeric,\n\t`sizes_og_filename` text\n)",
+    "CREATE TABLE \"nominations\" (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`guest_name` text NOT NULL,\n\t`guest_role_company` text,\n\t`profile_link` text,\n\t`reason` text NOT NULL,\n\t`status` text DEFAULT 'new' NOT NULL,\n\t`internal_notes` text,\n\t`name` text NOT NULL,\n\t`email` text NOT NULL,\n\t`consent` integer DEFAULT false NOT NULL,\n\t`consent_timestamp` text,\n\t`email_delivery_failed` integer DEFAULT false,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `payload_kv` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`key` text NOT NULL,\n\t`data` text NOT NULL\n)",
+    "CREATE TABLE `payload_locked_documents` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`global_slug` text,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `payload_locked_documents_rels` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`order` integer,\n\t`parent_id` integer NOT NULL,\n\t`path` text NOT NULL,\n\t`users_id` integer,\n\t`guests_id` integer,\n\t`episodes_id` integer,\n\t`topics_id` integer,\n\t`redirects_id` integer,\n\t`nominations_id` integer,\n\t`contact_messages_id` integer,\n\t`media_id` integer,\n\tFOREIGN KEY (`parent_id`) REFERENCES `payload_locked_documents`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`users_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`guests_id`) REFERENCES `guests`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`episodes_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`topics_id`) REFERENCES `topics`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`redirects_id`) REFERENCES `redirects`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`nominations_id`) REFERENCES `nominations`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`contact_messages_id`) REFERENCES `contact_messages`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`media_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE `payload_migrations` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`name` text,\n\t`batch` numeric,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `payload_preferences` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`key` text,\n\t`value` text,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `payload_preferences_rels` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`order` integer,\n\t`parent_id` integer NOT NULL,\n\t`path` text NOT NULL,\n\t`users_id` integer,\n\tFOREIGN KEY (`parent_id`) REFERENCES `payload_preferences`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`users_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade\n)",
+    "CREATE TABLE \"redirects\" (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`from` text NOT NULL,\n\t`to` text NOT NULL,\n\t`type` text DEFAULT '301' NOT NULL,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `site_settings` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`brand_name` text,\n\t`tagline` text,\n\t`publisher_name` text,\n\t`publisher_url` text,\n\t`attribution` text,\n\t`logo_id` integer,\n\t`default_og_image_id` integer,\n\t`hero_headline` text,\n\t`hero_mission` text,\n\t`featured_episode_override_id` integer,\n\t`about_mission` text,\n\t`about_audience` text,\n\t`about_editorial` text,\n\t`has_host_section` integer DEFAULT false,\n\t`host_name` text,\n\t`host_role` text,\n\t`host_bio` text,\n\t`host_portrait_id` integer,\n\t`youtube_channel_url` text,\n\t`linkedin_url` text,\n\t`twitter_url` text,\n\t`spotify_url` text,\n\t`apple_podcasts_url` text,\n\t`contact_email` text,\n\t`contact_phone` text,\n\t`contact_address` text,\n\t`nomination_recipient_email` text,\n\t`nomination_webhook_url` text,\n\t`analytics_id` text,\n\t`privacy_policy_content` text,\n\t`terms_content` text,\n\t`updated_at` text,\n\t`created_at` text,\n\tFOREIGN KEY (`logo_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`default_og_image_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`featured_episode_override_id`) REFERENCES `episodes`(`id`) ON UPDATE no action ON DELETE set null,\n\tFOREIGN KEY (`host_portrait_id`) REFERENCES `media`(`id`) ON UPDATE no action ON DELETE set null\n)",
+    "CREATE TABLE `topics` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`slug` text NOT NULL,\n\t`description` text,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL\n)",
+    "CREATE TABLE `users` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`role` text DEFAULT 'editor' NOT NULL,\n\t`updated_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,\n\t`email` text NOT NULL,\n\t`reset_password_token` text,\n\t`reset_password_expiration` text,\n\t`salt` text,\n\t`hash` text,\n\t`reset_password_requested_at` text,\n\t`login_attempts` numeric DEFAULT 0,\n\t`lock_until` text\n)",
+    "CREATE TABLE `users_sessions` (\n\t`_order` integer NOT NULL,\n\t`_parent_id` integer NOT NULL,\n\t`id` text PRIMARY KEY NOT NULL,\n\t`created_at` text,\n\t`expires_at` text NOT NULL,\n\tFOREIGN KEY (`_parent_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade\n)"
+  ],
+  "indexes": [
+    "CREATE INDEX `users_sessions_order_idx` ON `users_sessions` (`_order`)",
+    "CREATE INDEX `users_sessions_parent_id_idx` ON `users_sessions` (`_parent_id`)",
+    "CREATE INDEX `users_updated_at_idx` ON `users` (`updated_at`)",
+    "CREATE INDEX `users_created_at_idx` ON `users` (`created_at`)",
+    "CREATE UNIQUE INDEX `users_email_idx` ON `users` (`email`)",
+    "CREATE INDEX `guests_alternate_names_order_idx` ON `guests_alternate_names` (`_order`)",
+    "CREATE INDEX `guests_alternate_names_parent_id_idx` ON `guests_alternate_names` (`_parent_id`)",
+    "CREATE INDEX `guests_key_insights_order_idx` ON `guests_key_insights` (`_order`)",
+    "CREATE INDEX `guests_key_insights_parent_id_idx` ON `guests_key_insights` (`_parent_id`)",
+    "CREATE UNIQUE INDEX `guests_slug_idx` ON `guests` (`slug`)",
+    "CREATE INDEX `guests_portrait_idx` ON `guests` (`portrait_id`)",
+    "CREATE INDEX `guests_social_image_idx` ON `guests` (`social_image_id`)",
+    "CREATE INDEX `guests_updated_at_idx` ON `guests` (`updated_at`)",
+    "CREATE INDEX `guests_created_at_idx` ON `guests` (`created_at`)",
+    "CREATE INDEX `guests_rels_order_idx` ON `guests_rels` (`order`)",
+    "CREATE INDEX `guests_rels_parent_idx` ON `guests_rels` (`parent_id`)",
+    "CREATE INDEX `guests_rels_path_idx` ON `guests_rels` (`path`)",
+    "CREATE INDEX `guests_rels_topics_id_idx` ON `guests_rels` (`topics_id`)",
+    "CREATE INDEX `episodes_key_takeaways_order_idx` ON `episodes_key_takeaways` (`_order`)",
+    "CREATE INDEX `episodes_key_takeaways_parent_id_idx` ON `episodes_key_takeaways` (`_parent_id`)",
+    "CREATE INDEX `episodes_tags_order_idx` ON `episodes_tags` (`_order`)",
+    "CREATE INDEX `episodes_tags_parent_id_idx` ON `episodes_tags` (`_parent_id`)",
+    "CREATE INDEX `episodes_quotes_order_idx` ON `episodes_quotes` (`_order`)",
+    "CREATE INDEX `episodes_quotes_parent_id_idx` ON `episodes_quotes` (`_parent_id`)",
+    "CREATE UNIQUE INDEX `episodes_title_idx` ON `episodes` (`title`)",
+    "CREATE UNIQUE INDEX `episodes_slug_idx` ON `episodes` (`slug`)",
+    "CREATE INDEX `episodes_thumbnail_idx` ON `episodes` (`thumbnail_id`)",
+    "CREATE INDEX `episodes_updated_at_idx` ON `episodes` (`updated_at`)",
+    "CREATE INDEX `episodes_created_at_idx` ON `episodes` (`created_at`)",
+    "CREATE INDEX `episodes_rels_order_idx` ON `episodes_rels` (`order`)",
+    "CREATE INDEX `episodes_rels_parent_idx` ON `episodes_rels` (`parent_id`)",
+    "CREATE INDEX `episodes_rels_path_idx` ON `episodes_rels` (`path`)",
+    "CREATE INDEX `episodes_rels_guests_id_idx` ON `episodes_rels` (`guests_id`)",
+    "CREATE INDEX `episodes_rels_topics_id_idx` ON `episodes_rels` (`topics_id`)",
+    "CREATE UNIQUE INDEX `topics_name_idx` ON `topics` (`name`)",
+    "CREATE UNIQUE INDEX `topics_slug_idx` ON `topics` (`slug`)",
+    "CREATE INDEX `topics_updated_at_idx` ON `topics` (`updated_at`)",
+    "CREATE INDEX `topics_created_at_idx` ON `topics` (`created_at`)",
+    "CREATE INDEX `contact_messages_updated_at_idx` ON `contact_messages` (`updated_at`)",
+    "CREATE INDEX `contact_messages_created_at_idx` ON `contact_messages` (`created_at`)",
+    "CREATE INDEX `media_updated_at_idx` ON `media` (`updated_at`)",
+    "CREATE INDEX `media_created_at_idx` ON `media` (`created_at`)",
+    "CREATE UNIQUE INDEX `media_filename_idx` ON `media` (`filename`)",
+    "CREATE INDEX `media_sizes_thumbnail_sizes_thumbnail_filename_idx` ON `media` (`sizes_thumbnail_filename`)",
+    "CREATE INDEX `media_sizes_portrait_sizes_portrait_filename_idx` ON `media` (`sizes_portrait_filename`)",
+    "CREATE INDEX `media_sizes_og_sizes_og_filename_idx` ON `media` (`sizes_og_filename`)",
+    "CREATE UNIQUE INDEX `payload_kv_key_idx` ON `payload_kv` (`key`)",
+    "CREATE INDEX `payload_locked_documents_global_slug_idx` ON `payload_locked_documents` (`global_slug`)",
+    "CREATE INDEX `payload_locked_documents_updated_at_idx` ON `payload_locked_documents` (`updated_at`)",
+    "CREATE INDEX `payload_locked_documents_created_at_idx` ON `payload_locked_documents` (`created_at`)",
+    "CREATE INDEX `payload_locked_documents_rels_order_idx` ON `payload_locked_documents_rels` (`order`)",
+    "CREATE INDEX `payload_locked_documents_rels_parent_idx` ON `payload_locked_documents_rels` (`parent_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_path_idx` ON `payload_locked_documents_rels` (`path`)",
+    "CREATE INDEX `payload_locked_documents_rels_users_id_idx` ON `payload_locked_documents_rels` (`users_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_guests_id_idx` ON `payload_locked_documents_rels` (`guests_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_episodes_id_idx` ON `payload_locked_documents_rels` (`episodes_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_topics_id_idx` ON `payload_locked_documents_rels` (`topics_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_redirects_id_idx` ON `payload_locked_documents_rels` (`redirects_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_nominations_id_idx` ON `payload_locked_documents_rels` (`nominations_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_contact_messages_id_idx` ON `payload_locked_documents_rels` (`contact_messages_id`)",
+    "CREATE INDEX `payload_locked_documents_rels_media_id_idx` ON `payload_locked_documents_rels` (`media_id`)",
+    "CREATE INDEX `payload_preferences_key_idx` ON `payload_preferences` (`key`)",
+    "CREATE INDEX `payload_preferences_updated_at_idx` ON `payload_preferences` (`updated_at`)",
+    "CREATE INDEX `payload_preferences_created_at_idx` ON `payload_preferences` (`created_at`)",
+    "CREATE INDEX `payload_preferences_rels_order_idx` ON `payload_preferences_rels` (`order`)",
+    "CREATE INDEX `payload_preferences_rels_parent_idx` ON `payload_preferences_rels` (`parent_id`)",
+    "CREATE INDEX `payload_preferences_rels_path_idx` ON `payload_preferences_rels` (`path`)",
+    "CREATE INDEX `payload_preferences_rels_users_id_idx` ON `payload_preferences_rels` (`users_id`)",
+    "CREATE INDEX `payload_migrations_updated_at_idx` ON `payload_migrations` (`updated_at`)",
+    "CREATE INDEX `payload_migrations_created_at_idx` ON `payload_migrations` (`created_at`)",
+    "CREATE INDEX `site_settings_logo_idx` ON `site_settings` (`logo_id`)",
+    "CREATE INDEX `site_settings_default_og_image_idx` ON `site_settings` (`default_og_image_id`)",
+    "CREATE INDEX `site_settings_featured_episode_override_idx` ON `site_settings` (`featured_episode_override_id`)",
+    "CREATE INDEX `site_settings_host_portrait_idx` ON `site_settings` (`host_portrait_id`)",
+    "CREATE INDEX `guests_featured_idx` ON `guests` (`featured`)",
+    "CREATE INDEX `guests_status_idx` ON `guests` (`status`)",
+    "CREATE INDEX `episodes_published_at_idx` ON `episodes` (`published_at`)",
+    "CREATE INDEX `episodes_featured_idx` ON `episodes` (`featured`)",
+    "CREATE INDEX `episodes_status_idx` ON `episodes` (`status`)",
+    "CREATE INDEX `nominations_updated_at_idx` ON `nominations` (`updated_at`)",
+    "CREATE INDEX `nominations_created_at_idx` ON `nominations` (`created_at`)",
+    "CREATE UNIQUE INDEX `redirects_from_idx` ON `redirects` (`from`)",
+    "CREATE INDEX `redirects_updated_at_idx` ON `redirects` (`updated_at`)",
+    "CREATE INDEX `redirects_created_at_idx` ON `redirects` (`created_at`)"
+  ],
+  "data": {
+    "users": [],
+    "users_sessions": [],
+    "contact_messages": [],
+    "nominations": [],
+    "audit_logs": [],
+    "redirects": [],
+    "topics": [
+      {
+        "id": 1,
+        "name": "Technology",
+        "slug": "technology",
+        "description": "Architectures, frontier AI, silicon, and enterprise cloud infrastructure.",
+        "updated_at": "2026-10-10T07:07:51.445Z",
+        "created_at": "2026-10-10T07:07:51.445Z"
+      },
+      {
+        "id": 2,
+        "name": "Manufacturing",
+        "slug": "manufacturing",
+        "description": "Heavy industry, advanced robotics, supply chains, and operational excellence.",
+        "updated_at": "2026-10-10T07:07:51.455Z",
+        "created_at": "2026-10-10T07:07:51.454Z"
+      },
+      {
+        "id": 3,
+        "name": "Healthcare",
+        "slug": "healthcare",
+        "description": "Biotechnology, genomic medicine, pharmaceuticals, and health systems.",
+        "updated_at": "2026-10-10T07:07:51.465Z",
+        "created_at": "2026-10-10T07:07:51.465Z"
+      },
+      {
+        "id": 4,
+        "name": "Finance",
+        "slug": "finance",
+        "description": "Venture capital, sovereign wealth funds, private equity, and fintech.",
+        "updated_at": "2026-10-10T07:07:51.475Z",
+        "created_at": "2026-10-10T07:07:51.475Z"
+      },
+      {
+        "id": 5,
+        "name": "Consumer",
+        "slug": "consumer",
+        "description": "Global consumer brands, direct-to-consumer networks, and retail innovation.",
+        "updated_at": "2026-10-10T07:07:51.499Z",
+        "created_at": "2026-10-10T07:07:51.499Z"
+      },
+      {
+        "id": 6,
+        "name": "Infrastructure",
+        "slug": "infrastructure",
+        "description": "Energy transition, grid resilience, logistics, and physical capital assets.",
+        "updated_at": "2026-10-10T07:07:51.509Z",
+        "created_at": "2026-10-10T07:07:51.509Z"
+      },
+      {
+        "id": 7,
+        "name": "Entrepreneurship",
+        "slug": "entrepreneurship",
+        "description": "Zero-to-one company building, high-growth scaling, and founder psychology.",
+        "updated_at": "2026-10-10T07:07:51.522Z",
+        "created_at": "2026-10-10T07:07:51.521Z"
+      },
+      {
+        "id": 8,
+        "name": "Real Estate",
+        "slug": "real-estate",
+        "description": "Urban development, commercial portfolios, and architectural legacy.",
+        "updated_at": "2026-10-10T07:07:51.532Z",
+        "created_at": "2026-10-10T07:07:51.532Z"
+      },
+      {
+        "id": 9,
+        "name": "Hospitality",
+        "slug": "hospitality",
+        "description": "Global luxury, experiential travel, and high-touch service leadership.",
+        "updated_at": "2026-10-10T07:07:51.543Z",
+        "created_at": "2026-10-10T07:07:51.543Z"
+      },
+      {
+        "id": 10,
+        "name": "Education",
+        "slug": "education",
+        "description": "Future of work, higher education reform, and executive learning.",
+        "updated_at": "2026-10-10T07:07:51.552Z",
+        "created_at": "2026-10-10T07:07:51.552Z"
+      },
+      {
+        "id": 11,
+        "name": "Retail",
+        "slug": "retail",
+        "description": "Omnichannel commerce, supply ecosystems, and luxury merchandising.",
+        "updated_at": "2026-10-10T07:07:51.562Z",
+        "created_at": "2026-10-10T07:07:51.562Z"
+      }
+    ],
+    "media": [
+      {
+        "id": 1,
+        "alt": "Sample Executive Leader Portrait",
+        "caption": "Editorial Press Archives",
+        "updated_at": "2026-10-10T07:09:29.537Z",
+        "created_at": "2026-10-10T07:09:29.537Z",
+        "url": "/api/media/file/portrait-placeholder.svg",
+        "thumbnail_u_r_l": null,
+        "filename": "portrait-placeholder.svg",
+        "mime_type": "image/svg+xml",
+        "filesize": 1553,
+        "width": 800,
+        "height": 1000,
+        "focal_x": null,
+        "focal_y": null,
+        "sizes_thumbnail_url": null,
+        "sizes_thumbnail_width": null,
+        "sizes_thumbnail_height": null,
+        "sizes_thumbnail_mime_type": null,
+        "sizes_thumbnail_filesize": null,
+        "sizes_thumbnail_filename": null,
+        "sizes_portrait_url": null,
+        "sizes_portrait_width": null,
+        "sizes_portrait_height": null,
+        "sizes_portrait_mime_type": null,
+        "sizes_portrait_filesize": null,
+        "sizes_portrait_filename": null,
+        "sizes_og_url": null,
+        "sizes_og_width": null,
+        "sizes_og_height": null,
+        "sizes_og_mime_type": null,
+        "sizes_og_filesize": null,
+        "sizes_og_filename": null
+      },
+      {
+        "id": 2,
+        "alt": "Gemini_Generated_Image_xsmlesxsmlesxsml",
+        "caption": "",
+        "updated_at": "2026-10-12T10:50:47.831Z",
+        "created_at": "2026-10-12T10:50:00.815Z",
+        "url": "/media/gemini_generated_image_xsmlesxsmlesxsml-1791802200792.png",
+        "thumbnail_u_r_l": null,
+        "filename": "gemini_generated_image_xsmlesxsmlesxsml-1791802200792.png",
+        "mime_type": "image/png",
+        "filesize": 6010257,
+        "width": null,
+        "height": null,
+        "focal_x": null,
+        "focal_y": null,
+        "sizes_thumbnail_url": null,
+        "sizes_thumbnail_width": null,
+        "sizes_thumbnail_height": null,
+        "sizes_thumbnail_mime_type": null,
+        "sizes_thumbnail_filesize": null,
+        "sizes_thumbnail_filename": null,
+        "sizes_portrait_url": null,
+        "sizes_portrait_width": null,
+        "sizes_portrait_height": null,
+        "sizes_portrait_mime_type": null,
+        "sizes_portrait_filesize": null,
+        "sizes_portrait_filename": null,
+        "sizes_og_url": null,
+        "sizes_og_width": null,
+        "sizes_og_height": null,
+        "sizes_og_mime_type": null,
+        "sizes_og_filesize": null,
+        "sizes_og_filename": null
+      }
+    ],
+    "guests": [
+      {
+        "id": 1,
+        "full_name": "Elena Rostova",
+        "slug": "elena-rostova",
+        "role": "Co-Founder & CEO",
+        "company": "Quantum Dynamics",
+        "short_overview": "Pioneer in cryogenic silicon architectures and sovereign quantum networks with over two decades steering deep-tech transformations across North America and Europe.",
+        "biography": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"Elena Rostova has dedicated 22 years to bridging theoretical quantum mechanics and industrial semiconductor fabrication. Prior to founding Quantum Dynamics in 2018, she led advanced exploratory physics at Bell Labs and served as Chief Technology Officer at Cerulean Microelectronics. Under her leadership, Quantum Dynamics achieved the first fault-tolerant 256-qubit logical cluster operating at room-scale dilution refrigeration.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "portrait_id": 1,
+        "portrait_alt": null,
+        "portrait_credit": null,
+        "links_linkedin": "https://www.linkedin.com",
+        "links_website": "https://quantumdynamics.example.com",
+        "links_other": null,
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Elena Rostova — Biography & Podcast Episodes | Unchartered",
+        "seo_description": "Elena Rostova, Co-Founder & CEO at Quantum Dynamics. Read biography, career leadership insights, and watch exclusive podcast conversations on Unchartered: Legends & Legacies.",
+        "social_image_id": null,
+        "updated_at": "2026-10-10T07:12:49.448Z",
+        "created_at": "2026-10-10T07:12:49.446Z",
+        "canonical_override": null
+      },
+      {
+        "id": 2,
+        "full_name": "Marcus Vance",
+        "slug": "marcus-vance",
+        "role": "Managing Partner",
+        "company": "Aether Capital",
+        "short_overview": "Institutional investor allocating over $4B across deep infrastructure, robotics, and energy transitions across global venture and growth markets.",
+        "biography": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"Marcus Vance is the founder and Managing Partner of Aether Capital, a multistage investment partnership managing sovereign and institutional mandates. Known for high-conviction, concentrated portfolio management, Vance has stewarded early investments in twelve category-defining enterprises across autonomous manufacturing, fusion energy, and aerospace propulsion.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "portrait_id": 1,
+        "portrait_alt": null,
+        "portrait_credit": null,
+        "links_linkedin": "https://www.linkedin.com",
+        "links_website": null,
+        "links_other": null,
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Marcus Vance — Biography & Podcast Episodes | Unchartered",
+        "seo_description": "Marcus Vance, Managing Partner at Aether Capital. Read biography, career leadership insights, and watch exclusive podcast conversations on Unchartered: Legends & Legacies.",
+        "social_image_id": null,
+        "updated_at": "2026-10-10T07:12:49.490Z",
+        "created_at": "2026-10-10T07:12:49.489Z",
+        "canonical_override": null
+      },
+      {
+        "id": 3,
+        "full_name": "Dr. Soraya Al-Mansoor",
+        "slug": "soraya-al-mansoor",
+        "role": "Chairperson & Chief Scientist",
+        "company": "Helix Therapeutics",
+        "short_overview": "Molecular biologist and biotechnology executive advancing synthetic genomics, computational protein design, and targeted cellular medicine.",
+        "biography": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"Dr. Soraya Al-Mansoor is internationally celebrated for her pioneering work in programmable mRNA synthesis. A former Rhodes Scholar and professor at Oxford University, she transitioned to enterprise biotechnology to build Helix Therapeutics. Helix currently operates four global research campuses engineering therapies for formerly intractable autoimmune disorders.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "portrait_id": 1,
+        "portrait_alt": null,
+        "portrait_credit": null,
+        "links_linkedin": "https://www.linkedin.com",
+        "links_website": "https://helixtherapeutics.example.com",
+        "links_other": null,
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Dr. Soraya Al-Mansoor — Biography & Podcast Episodes | Unchartered",
+        "seo_description": "Dr. Soraya Al-Mansoor, Chairperson & Chief Scientist at Helix Therapeutics. Read biography, career leadership insights, and watch exclusive podcast conversations on Unchartered: Legends & Legacies.",
+        "social_image_id": null,
+        "updated_at": "2026-10-10T07:12:49.528Z",
+        "created_at": "2026-10-10T07:12:49.528Z",
+        "canonical_override": null
+      },
+      {
+        "id": 4,
+        "full_name": "Thomas Sterling",
+        "slug": "thomas-sterling",
+        "role": "Executive Chairman",
+        "company": "Sterling Industrial Group",
+        "short_overview": "Built one of the world’s largest precision manufacturing conglomerates, modernizing automated supply chains, foundries, and robotics across four continents.",
+        "biography": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"Thomas Sterling transformed a regional family-owned tooling facility into Sterling Industrial Group, an international manufacturing enterprise employing 35,000 specialists across forty factories worldwide. A pioneer in cyber-physical automation, Sterling serves on multiple sovereign trade advisory councils.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "portrait_id": 1,
+        "portrait_alt": null,
+        "portrait_credit": null,
+        "links_linkedin": "https://www.linkedin.com",
+        "links_website": null,
+        "links_other": null,
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Thomas Sterling — Biography & Podcast Episodes | Unchartered",
+        "seo_description": "Thomas Sterling, Executive Chairman at Sterling Industrial Group. Read biography, career leadership insights, and watch exclusive podcast conversations on Unchartered: Legends & Legacies.",
+        "social_image_id": null,
+        "updated_at": "2026-10-10T07:12:49.568Z",
+        "created_at": "2026-10-10T07:12:49.568Z",
+        "canonical_override": null
+      },
+      {
+        "id": 5,
+        "full_name": "Mahadev Lambadi",
+        "slug": "mahadev-lambadi",
+        "role": "developer",
+        "company": "ai automation labs",
+        "short_overview": "i am a developer",
+        "biography": "xrytujk",
+        "portrait_id": null,
+        "portrait_alt": null,
+        "portrait_credit": null,
+        "links_linkedin": null,
+        "links_website": null,
+        "links_other": null,
+        "featured": 1,
+        "status": "published",
+        "seo_title": null,
+        "seo_description": null,
+        "social_image_id": null,
+        "updated_at": "2026-10-12T10:53:26.114Z",
+        "created_at": "2026-10-12T10:53:26.114Z",
+        "canonical_override": null
+      }
+    ],
+    "guests_alternate_names": [],
+    "guests_key_insights": [
+      {
+        "_order": 1,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4b5",
+        "quote": "In deep technology, the greatest trap is optimizing for a demo rather than industrial-scale yield.",
+        "context": "Engineering Strategy"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4b6",
+        "quote": "True innovation rarely begins with consensus; it begins when physics validates what the market considered impossible.",
+        "context": "Leadership"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4b7",
+        "quote": "Capital is commoditized; sovereign strategic patience is the only durable moat in foundational technologies.",
+        "context": "Capital Allocation"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4b8",
+        "quote": "Founders who manage through crisis don’t look for certainty—they master decision velocity.",
+        "context": "Executive Resilience"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4b9",
+        "quote": "Engineering biology requires the profound humility to listen to four billion years of cellular evolution.",
+        "context": "Scientific Discovery"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4ba",
+        "quote": "Scientific leadership is about translating mathematical elegance into patient survival.",
+        "context": "Mission Focus"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4bb",
+        "quote": "Software eats the world, but physics still builds the factory floor and the power grid.",
+        "context": "Industrial Realism"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4bc",
+        "quote": "Culture is not a poster on the cafeteria wall; it is what your shift managers do when production stops.",
+        "context": "Operational Excellence"
+      }
+    ],
+    "guests_rels": [
+      {
+        "id": 1,
+        "order": 1,
+        "parent_id": 1,
+        "path": "industries",
+        "topics_id": 1
+      },
+      {
+        "id": 2,
+        "order": 2,
+        "parent_id": 1,
+        "path": "industries",
+        "topics_id": 6
+      },
+      {
+        "id": 3,
+        "order": 1,
+        "parent_id": 2,
+        "path": "industries",
+        "topics_id": 4
+      },
+      {
+        "id": 4,
+        "order": 2,
+        "parent_id": 2,
+        "path": "industries",
+        "topics_id": 7
+      },
+      {
+        "id": 5,
+        "order": 1,
+        "parent_id": 3,
+        "path": "industries",
+        "topics_id": 3
+      },
+      {
+        "id": 6,
+        "order": 2,
+        "parent_id": 3,
+        "path": "industries",
+        "topics_id": 1
+      },
+      {
+        "id": 7,
+        "order": 1,
+        "parent_id": 4,
+        "path": "industries",
+        "topics_id": 2
+      },
+      {
+        "id": 8,
+        "order": 2,
+        "parent_id": 4,
+        "path": "industries",
+        "topics_id": 6
+      }
+    ],
+    "episodes": [
+      {
+        "id": 1,
+        "title": "Episode 1: The Quantum Horizon — Building Sovereign Compute Beyond Silicon",
+        "slug": "the-quantum-horizon-sovereign-compute",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "youtube_video_id": "dQw4w9WgXcQ",
+        "fallback_watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "short_summary": "Elena Rostova, CEO of Quantum Dynamics, reveals the engineering bottlenecks in commercial quantum computing, scaling cryogenic chipsets, and why compute sovereignty has become a national defense imperative.",
+        "description": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"In this inaugural broadcast of Unchartered, we sit down with Elena Rostova at the Quantum Dynamics research facility. Rostova unpacks the reality of commercial quantum systems, why classical silicon will still dominate consumer workloads, and how cryogenic engineering represents the true frontier of enterprise computing.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "thumbnail_id": null,
+        "episode_number": 1,
+        "season": 1,
+        "published_at": "2026-03-01T12:00:00.000Z",
+        "transcript": "Elena Rostova: Thank you for having me. When we founded Quantum Dynamics, everyone asked whether quantum computing would replace GPU clusters...\nHost: And your answer was always a decisive no.\nElena Rostova: Exactly. Quantum is not a faster CPU; it is an entirely different domain of mathematics designed for simulation of physics and cryptography...",
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Episode 1: The Quantum Horizon — Building Sovereign Compute Beyond Silicon | Unchartered: Legends & Legacies",
+        "seo_description": "Elena Rostova, CEO of Quantum Dynamics, reveals the engineering bottlenecks in commercial quantum computing, scaling cryogenic chipsets, and why compute sovereignty has become a national defense imperative.",
+        "canonical_override": null,
+        "updated_at": "2026-10-10T07:12:49.606Z",
+        "created_at": "2026-10-10T07:12:49.605Z"
+      },
+      {
+        "id": 2,
+        "title": "Episode 2: Capital Allocation in the Age of Frontier Innovation",
+        "slug": "capital-allocation-frontier-innovation",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "youtube_video_id": "dQw4w9WgXcQ",
+        "fallback_watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "short_summary": "Marcus Vance of Aether Capital discusses macroeconomic shifts, deploying multi-billion-dollar sovereign pools into hard assets, and identifying generational founders capable of navigating industrial complexity.",
+        "description": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"In Episode 2, Marcus Vance deconstructs the illusion of quick software exits and makes the contrarian case for decade-long horizons in capital allocation. We explore how geopolitical realignments are reshaping LP expectations and what metrics separate visionary deep-tech founders from academic researchers.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "thumbnail_id": null,
+        "episode_number": 2,
+        "season": 1,
+        "published_at": "2026-03-08T12:00:00.000Z",
+        "transcript": "Host: Marcus, welcome to Unchartered. You have allocated billions into physical industries when the market wanted enterprise apps.\nMarcus Vance: It comes down to first principles. Software that does not touch physical atoms has hit diminishing economic returns...",
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Episode 2: Capital Allocation in the Age of Frontier Innovation | Unchartered: Legends & Legacies",
+        "seo_description": "Marcus Vance of Aether Capital discusses macroeconomic shifts, deploying multi-billion-dollar sovereign pools into hard assets, and identifying generational founders capable of navigating industrial complexity.",
+        "canonical_override": null,
+        "updated_at": "2026-10-10T07:12:49.676Z",
+        "created_at": "2026-10-10T07:12:49.676Z"
+      },
+      {
+        "id": 3,
+        "title": "Episode 3: Re-engineering Biology — From Genetic Code to Scaled Therapeutics",
+        "slug": "reengineering-biology-scaled-therapeutics",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "youtube_video_id": "dQw4w9WgXcQ",
+        "fallback_watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "short_summary": "Dr. Soraya Al-Mansoor breaks down generative biology, FDA acceleration pathways for bespoke genetic medicine, and the discipline required to scale synthetic manufacturing without compromising safety.",
+        "description": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"Dr. Soraya Al-Mansoor joins Unchartered to discuss the historic inflection point in synthetic biology. We trace the shift from empirical trial-and-error chemistry to generative algorithmic biology, examining the regulatory and production hurdles of delivering personalized cellular therapies globally.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "thumbnail_id": null,
+        "episode_number": 3,
+        "season": 1,
+        "published_at": "2026-03-15T12:00:00.000Z",
+        "transcript": "Host: Dr. Al-Mansoor, synthetic genomics has gone from a fringe science to mainstream pharmaceutical pipeline in under a decade.\nDr. Soraya Al-Mansoor: That speed is intoxicating, but biology has zero tolerance for arrogance. Every shortcut in clinical validation comes back to haunt you...",
+        "featured": 1,
+        "status": "published",
+        "seo_title": "Episode 3: Re-engineering Biology — From Genetic Code to Scaled Therapeutics | Unchartered: Legends & Legacies",
+        "seo_description": "Dr. Soraya Al-Mansoor breaks down generative biology, FDA acceleration pathways for bespoke genetic medicine, and the discipline required to scale synthetic manufacturing without compromising safety.",
+        "canonical_override": null,
+        "updated_at": "2026-10-10T07:12:49.733Z",
+        "created_at": "2026-10-10T07:12:49.732Z"
+      },
+      {
+        "id": 4,
+        "title": "Episode 4: The Factory of 2035 — Autonomous Robotics and Industrial Mastery",
+        "slug": "factory-2035-autonomous-robotics-industrial-mastery",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "youtube_video_id": "dQw4w9WgXcQ",
+        "fallback_watch_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "short_summary": "Thomas Sterling, Executive Chairman of Sterling Industrial Group, shares five decades of lessons transforming manufacturing plants into autonomous robotic powerhouses and building generational resilience.",
+        "description": "{\"root\":{\"type\":\"root\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"paragraph\",\"format\":\"\",\"indent\":0,\"version\":1,\"children\":[{\"type\":\"text\",\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"\",\"text\":\"In Episode 4, Thomas Sterling takes us behind the gates of heavy manufacturing. Sterling recounts the painful decisions behind automating legacy foundries, preserving skilled workforce institutional knowledge, and defending corporate sovereignty during supply chain shocks.\",\"version\":1}],\"direction\":\"ltr\"}],\"direction\":\"ltr\"}}",
+        "thumbnail_id": null,
+        "episode_number": 4,
+        "season": 1,
+        "published_at": "2026-03-22T12:00:00.000Z",
+        "transcript": "Host: Thomas, your factories produce the parts that hold together global infrastructure.\nThomas Sterling: And that means we have zero margin for ideological fantasy. A turbine either operates for thirty years under 2,000 degrees, or it fails...",
+        "featured": 0,
+        "status": "published",
+        "seo_title": "Episode 4: The Factory of 2035 — Autonomous Robotics and Industrial Mastery | Unchartered: Legends & Legacies",
+        "seo_description": "Thomas Sterling, Executive Chairman of Sterling Industrial Group, shares five decades of lessons transforming manufacturing plants into autonomous robotic powerhouses and building generational resilience.",
+        "canonical_override": null,
+        "updated_at": "2026-10-10T07:12:49.792Z",
+        "created_at": "2026-10-10T07:12:49.791Z"
+      },
+      {
+        "id": 5,
+        "title": "first episode",
+        "slug": "first-episode",
+        "youtube_url": null,
+        "youtube_video_id": null,
+        "fallback_watch_url": null,
+        "short_summary": "abcdefg",
+        "description": "rvefefvvf",
+        "thumbnail_id": null,
+        "episode_number": null,
+        "season": null,
+        "published_at": "2026-10-12T10:54:23.969Z",
+        "transcript": null,
+        "featured": 0,
+        "status": "publish",
+        "seo_title": null,
+        "seo_description": null,
+        "canonical_override": null,
+        "updated_at": "2026-10-12T10:54:23.969Z",
+        "created_at": "2026-10-12T10:54:23.969Z"
+      }
+    ],
+    "episodes_key_takeaways": [
+      {
+        "_order": 1,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4bd",
+        "takeaway": "Cryogenic yield challenges will determine commercial quantum viability by 2028."
+      },
+      {
+        "_order": 2,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4be",
+        "takeaway": "Why compute sovereignty has shifted from an economic policy to a primary defense priority."
+      },
+      {
+        "_order": 3,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4bf",
+        "takeaway": "The transition from academic experimentation to ISO-certified industrial quantum clusters."
+      },
+      {
+        "_order": 1,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c4",
+        "takeaway": "The death of the 3-year SaaS venture fund model in deep industrial verticals."
+      },
+      {
+        "_order": 2,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c5",
+        "takeaway": "How institutional LPs evaluate geopolitical risk in supply chain and semiconductor portfolios."
+      },
+      {
+        "_order": 3,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c6",
+        "takeaway": "Why decision velocity under incomplete information is the single most predictive founder metric."
+      },
+      {
+        "_order": 1,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4cb",
+        "takeaway": "Computational protein folding has compressed drug discovery timelines by over 70%."
+      },
+      {
+        "_order": 2,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4cc",
+        "takeaway": "The critical bottleneck has migrated from molecular design to cold-chain bioreactor manufacturing."
+      },
+      {
+        "_order": 3,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4cd",
+        "takeaway": "How modern biotech chairs structure research teams to balance academic rigor with commercial speed."
+      },
+      {
+        "_order": 1,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d2",
+        "takeaway": "Why brownfield factory automation requires ten times more organizational empathy than greenfield construction."
+      },
+      {
+        "_order": 2,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d3",
+        "takeaway": "The economic trade-offs of onshoring manufacturing versus distributed redundancy."
+      },
+      {
+        "_order": 3,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d4",
+        "takeaway": "What high-reliability manufacturing principles can teach software and finance leaders."
+      }
+    ],
+    "episodes_quotes": [
+      {
+        "_order": 1,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4c3",
+        "quote": "Everyone talks about qubits; the real battle is in cryogenic thermal dissipation at 15 millikelvin.",
+        "speaker": "Elena Rostova"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4ca",
+        "quote": "When capital was cheap, everybody looked like a strategic genius. Now, operational rigor is once again the only thing that matters.",
+        "speaker": "Marcus Vance"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4d1",
+        "quote": "We are moving from discovering medicine to programming it.",
+        "speaker": "Dr. Soraya Al-Mansoor"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d8",
+        "quote": "If your automated system cannot handle a thirty-minute power fluctuation, you do not have an automated factory—you have an expensive sculpture.",
+        "speaker": "Thomas Sterling"
+      }
+    ],
+    "episodes_tags": [
+      {
+        "_order": 1,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4c0",
+        "tag": "Quantum"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4c1",
+        "tag": "Semiconductors"
+      },
+      {
+        "_order": 3,
+        "_parent_id": 1,
+        "id": "6ac9e571991ff52ed0a2e4c2",
+        "tag": "DeepTech"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c7",
+        "tag": "VentureCapital"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c8",
+        "tag": "Macroeconomics"
+      },
+      {
+        "_order": 3,
+        "_parent_id": 2,
+        "id": "6ac9e571991ff52ed0a2e4c9",
+        "tag": "Strategy"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4ce",
+        "tag": "Biotechnology"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4cf",
+        "tag": "Genomics"
+      },
+      {
+        "_order": 3,
+        "_parent_id": 3,
+        "id": "6ac9e571991ff52ed0a2e4d0",
+        "tag": "Healthcare"
+      },
+      {
+        "_order": 1,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d5",
+        "tag": "Manufacturing"
+      },
+      {
+        "_order": 2,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d6",
+        "tag": "Robotics"
+      },
+      {
+        "_order": 3,
+        "_parent_id": 4,
+        "id": "6ac9e571991ff52ed0a2e4d7",
+        "tag": "SupplyChains"
+      }
+    ],
+    "episodes_rels": [
+      {
+        "id": 1,
+        "order": 1,
+        "parent_id": 1,
+        "path": "guests",
+        "guests_id": 1,
+        "topics_id": null
+      },
+      {
+        "id": 2,
+        "order": 1,
+        "parent_id": 1,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 1
+      },
+      {
+        "id": 3,
+        "order": 2,
+        "parent_id": 1,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 6
+      },
+      {
+        "id": 4,
+        "order": 1,
+        "parent_id": 2,
+        "path": "guests",
+        "guests_id": 2,
+        "topics_id": null
+      },
+      {
+        "id": 5,
+        "order": 1,
+        "parent_id": 2,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 4
+      },
+      {
+        "id": 6,
+        "order": 2,
+        "parent_id": 2,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 7
+      },
+      {
+        "id": 7,
+        "order": 1,
+        "parent_id": 3,
+        "path": "guests",
+        "guests_id": 3,
+        "topics_id": null
+      },
+      {
+        "id": 8,
+        "order": 1,
+        "parent_id": 3,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 3
+      },
+      {
+        "id": 9,
+        "order": 2,
+        "parent_id": 3,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 1
+      },
+      {
+        "id": 10,
+        "order": 1,
+        "parent_id": 4,
+        "path": "guests",
+        "guests_id": 4,
+        "topics_id": null
+      },
+      {
+        "id": 11,
+        "order": 1,
+        "parent_id": 4,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 2
+      },
+      {
+        "id": 12,
+        "order": 2,
+        "parent_id": 4,
+        "path": "topics",
+        "guests_id": null,
+        "topics_id": 6
+      }
+    ],
+    "site_settings": [
+      {
+        "id": 1,
+        "brand_name": "Unchartered: Legends & Legacies",
+        "tagline": "In-depth conversations with founders, CEOs, chairpersons, and pioneers shaping the global frontier.",
+        "publisher_name": "AI Automation Labs",
+        "publisher_url": "https://automationlabs.online/",
+        "attribution": "A podcast by AI Automation Labs",
+        "logo_id": null,
+        "default_og_image_id": null,
+        "hero_headline": "Where Industry Titans Share the Architecture of Legacy",
+        "hero_mission": "In-depth conversations with founders, CEOs, chairpersons, and pioneers shaping the global frontier.",
+        "featured_episode_override_id": null,
+        "about_mission": null,
+        "about_audience": null,
+        "about_editorial": null,
+        "has_host_section": 0,
+        "host_name": null,
+        "host_role": null,
+        "host_bio": null,
+        "host_portrait_id": null,
+        "youtube_channel_url": "https://www.youtube.com/@uncharteredpodcast",
+        "linkedin_url": "https://www.linkedin.com/company/ai-automation-labs",
+        "twitter_url": "https://x.com/uncharteredcast",
+        "spotify_url": null,
+        "apple_podcasts_url": null,
+        "contact_email": "contact@uncharteredpodcast.com",
+        "contact_phone": null,
+        "contact_address": null,
+        "nomination_recipient_email": "nominations@uncharteredpodcast.com",
+        "nomination_webhook_url": null,
+        "analytics_id": null,
+        "privacy_policy_content": null,
+        "terms_content": null,
+        "updated_at": "2026-10-11T13:44:40.413Z",
+        "created_at": "2026-10-10T07:07:51.588Z"
+      }
+    ]
+  }
+}

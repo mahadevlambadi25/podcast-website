@@ -9,6 +9,7 @@ export function getDbClient(): Client {
   }
 
   const rawUri = process.env.DATABASE_URI || 'file:./payload.db';
+  const authToken = process.env.DATABASE_AUTH_TOKEN;
 
   let url = rawUri;
   if (rawUri.startsWith('file:')) {
@@ -21,6 +22,7 @@ export function getDbClient(): Client {
 
   clientInstance = createClient({
     url,
+    authToken,
   });
 
   return clientInstance;

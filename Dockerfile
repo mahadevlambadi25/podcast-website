@@ -14,6 +14,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV DOCKER_BUILD=1
 # Run build
 RUN npm run build
 
@@ -27,7 +28,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Create media and data directories for persistent storage
-RUN mkdir -p /app/media /app/data && chown -R nextjs:nodejs /app/media /app/data
+RUN mkdir -p /app/media /app/data && chown -R nextjs:nodejs /app
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
@@ -39,4 +40,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "node ./scripts/ensure-db.mjs && npm run start"]
