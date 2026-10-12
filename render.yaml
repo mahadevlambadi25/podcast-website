@@ -1,0 +1,51 @@
+services:
+  # Web application service (Next.js + Payload CMS)
+  - type: web
+    name: unchartered-podcast-web
+    env: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: PAYLOAD_SECRET
+        generateValue: true
+      - key: DATABASE_URI
+        value: file:./payload.db
+      - key: CRON_SECRET
+        generateValue: true
+      - key: SEED_DEMO
+        value: "false"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: unchartered-media-uploads
+      mountPath: /app/media
+      sizeGB: 10
+
+  # Scheduled publishing cron (runs every 10 minutes to auto-publish scheduled episodes)
+  - type: cron
+    name: unchartered-publish-cron
+    env: node
+    schedule: "*/10 * * * *"
+    buildCommand: ""
+    startCommand: 'curl -fsS -X POST "${NEXT_PUBLIC_SITE_URL}/api/cron/publish" -H "Authorization: Bearer ${CRON_SECRET}" || true'
+    envVars:
+      - key: NEXT_PUBLIC_SITE_URL
+        fromService:
+          type: web
+          name: unchartered-podcast-web
+          property: host
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: unchartered-podcast-web
+          property: envVar:CRON_SECRET

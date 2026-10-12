@@ -1,0 +1,51 @@
+{
+  "name": "unchartered-podcast",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && tsx ./scripts/test-e2e.ts",
+    "seed": "tsx ./scripts/seed.ts",
+    "seed:clean": "tsx ./scripts/seed-clean.ts",
+    "admin:setup": "tsx ./scripts/setup-admin.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "@payloadcms/db-postgres": "3.90.2",
+    "@payloadcms/db-sqlite": "3.90.2",
+    "@payloadcms/next": "3.90.2",
+    "@payloadcms/richtext-lexical": "3.90.2",
+    "@payloadcms/storage-s3": "3.90.2",
+    "graphql": "^16.8.1",
+    "lucide-react": "^0.475.0",
+    "next": "15.3.9",
+    "payload": "3.90.2",
+    "react": "19.0.1",
+    "react-dom": "19.0.1",
+    "resend": "^4.1.2",
+    "sharp": "^0.33.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.7",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.3.9",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

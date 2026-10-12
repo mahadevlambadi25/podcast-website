@@ -1,0 +1,38 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Payload CMS & SQLite
+payload.db*
+*.db
+*.db-journal
+*.sqlite
+*.backup*
+backups/
+*.zip
+media/
+
+# Environment
+.env*.local
+.env
+.env.production
+
+# Testing & Artifacts
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+test_*.png
+*_redesigned.png
+
+# OS
+.DS_Store
+Thumbs.db
