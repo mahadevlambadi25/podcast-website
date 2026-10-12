@@ -48,4 +48,4 @@ services:
         fromService:
           type: web
           name: unchartered-podcast-web
-          property: envVar:CRON_SECRET
+          envVarKey: CRON_SECRET
