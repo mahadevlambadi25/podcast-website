@@ -1,4 +1,5 @@
 import { db } from '@/lib/db/client';
+import { normalizeIsoTimestamp, toUtcIsoString } from '@/lib/date';
 
 export interface GuestDetail {
   id: number;
@@ -123,21 +124,21 @@ export async function listGuests(options: {
       role: r.role ? String(r.role) : undefined,
       company: r.company ? String(r.company) : undefined,
       short_overview: r.short_overview ? String(r.short_overview) : undefined,
-      biography: r.biography ? String(r.biography) : undefined,
+      biography: r.biography ? String(r.biography) : (r.bio ? String(r.bio) : undefined),
       portrait_id: r.portrait_id ? Number(r.portrait_id) : undefined,
       portrait_url: r.portrait_url ? String(r.portrait_url) : undefined,
       portrait_alt: r.portrait_alt ? String(r.portrait_alt) : undefined,
       portrait_credit: r.portrait_credit ? String(r.portrait_credit) : undefined,
-      links_linkedin: r.links_linkedin ? String(r.links_linkedin) : undefined,
-      links_website: r.links_website ? String(r.links_website) : undefined,
+      links_linkedin: r.links_linkedin ? String(r.links_linkedin) : (r.linkedin_url ? String(r.linkedin_url) : undefined),
+      links_website: r.links_website ? String(r.links_website) : (r.website_url ? String(r.website_url) : undefined),
       links_other: r.links_other ? String(r.links_other) : undefined,
       featured: Boolean(r.featured),
       status: (r.status as any) || 'draft',
       seo_title: r.seo_title ? String(r.seo_title) : undefined,
       seo_description: r.seo_description ? String(r.seo_description) : undefined,
       canonical_override: r.canonical_override ? String(r.canonical_override) : undefined,
-      updated_at: String(r.updated_at || ''),
-      created_at: String(r.created_at || ''),
+      updated_at: normalizeIsoTimestamp(r.updated_at) || '',
+      created_at: normalizeIsoTimestamp(r.created_at) || '',
       topics: topicsMap[id] || [],
       key_insights: [],
       episode_count: Number(r.episode_count || 0),
@@ -190,21 +191,21 @@ export async function getGuestById(id: number): Promise<GuestDetail | null> {
     role: r.role ? String(r.role) : undefined,
     company: r.company ? String(r.company) : undefined,
     short_overview: r.short_overview ? String(r.short_overview) : undefined,
-    biography: r.biography ? String(r.biography) : undefined,
+    biography: r.biography ? String(r.biography) : (r.bio ? String(r.bio) : undefined),
     portrait_id: r.portrait_id ? Number(r.portrait_id) : undefined,
     portrait_url: r.portrait_url ? String(r.portrait_url) : undefined,
     portrait_alt: r.portrait_alt ? String(r.portrait_alt) : undefined,
     portrait_credit: r.portrait_credit ? String(r.portrait_credit) : undefined,
-    links_linkedin: r.links_linkedin ? String(r.links_linkedin) : undefined,
-    links_website: r.links_website ? String(r.links_website) : undefined,
+    links_linkedin: r.links_linkedin ? String(r.links_linkedin) : (r.linkedin_url ? String(r.linkedin_url) : undefined),
+    links_website: r.links_website ? String(r.links_website) : (r.website_url ? String(r.website_url) : undefined),
     links_other: r.links_other ? String(r.links_other) : undefined,
     featured: Boolean(r.featured),
     status: (r.status as any) || 'draft',
     seo_title: r.seo_title ? String(r.seo_title) : undefined,
     seo_description: r.seo_description ? String(r.seo_description) : undefined,
     canonical_override: r.canonical_override ? String(r.canonical_override) : undefined,
-    updated_at: String(r.updated_at || ''),
-    created_at: String(r.created_at || ''),
+    updated_at: normalizeIsoTimestamp(r.updated_at) || '',
+    created_at: normalizeIsoTimestamp(r.created_at) || '',
     topics: topicsRes.rows.map((t) => ({
       id: Number(t.id),
       name: String(t.name),
@@ -219,45 +220,80 @@ export async function getGuestById(id: number): Promise<GuestDetail | null> {
 }
 
 export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: number[] }): Promise<number> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
   const bioValue = data.biography || '';
   const linkedinValue = data.links_linkedin || null;
   const websiteValue = data.links_website || null;
 
-  const insertRes = await db.execute({
-    sql: `
-      INSERT INTO guests (
-        full_name, slug, role, company, short_overview, biography, bio,
-        portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
-        links_website, website_url, links_other, featured, status, seo_title,
-        seo_description, canonical_override, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    args: [
-      data.full_name || 'Unnamed Guest',
-      data.slug || `guest-${Date.now()}`,
-      data.role || '',
-      data.company || null,
-      data.short_overview || '',
-      bioValue,
-      bioValue,
-      data.portrait_id || null,
-      data.portrait_alt || null,
-      data.portrait_credit || null,
-      linkedinValue,
-      linkedinValue,
-      websiteValue,
-      websiteValue,
-      data.links_other || null,
-      data.featured ? 1 : 0,
-      data.status || 'draft',
-      data.seo_title || null,
-      data.seo_description || null,
-      data.canonical_override || null,
-      now,
-      now,
-    ],
-  });
+  let insertRes;
+  try {
+    insertRes = await db.execute({
+      sql: `
+        INSERT INTO guests (
+          full_name, slug, role, company, short_overview, biography, bio,
+          portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
+          links_website, website_url, links_other, featured, status, seo_title,
+          seo_description, canonical_override, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        data.full_name || 'Unnamed Guest',
+        data.slug || `guest-${Date.now()}`,
+        data.role || '',
+        data.company || null,
+        data.short_overview || '',
+        bioValue,
+        bioValue,
+        data.portrait_id || null,
+        data.portrait_alt || null,
+        data.portrait_credit || null,
+        linkedinValue,
+        linkedinValue,
+        websiteValue,
+        websiteValue,
+        data.links_other || null,
+        data.featured ? 1 : 0,
+        data.status || 'draft',
+        data.seo_title || null,
+        data.seo_description || null,
+        data.canonical_override || null,
+        now,
+        now,
+      ],
+    });
+  } catch (err: any) {
+    if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
+      insertRes = await db.execute({
+        sql: `
+          INSERT INTO guests (
+            full_name, slug, role, company, short_overview, bio,
+            portrait_id, linkedin_url, website_url, featured, status,
+            seo_title, seo_description, canonical_override, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          data.full_name || 'Unnamed Guest',
+          data.slug || `guest-${Date.now()}`,
+          data.role || '',
+          data.company || null,
+          data.short_overview || '',
+          bioValue,
+          data.portrait_id || null,
+          linkedinValue,
+          websiteValue,
+          data.featured ? 1 : 0,
+          data.status || 'draft',
+          data.seo_title || null,
+          data.seo_description || null,
+          data.canonical_override || null,
+          now,
+          now,
+        ],
+      });
+    } else {
+      throw err;
+    }
+  }
 
   const newId = Number(insertRes.lastInsertRowid);
 
@@ -277,59 +313,105 @@ export async function updateGuest(
   id: number,
   data: Partial<GuestDetail> & { topic_ids?: number[] }
 ): Promise<void> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
 
-  await db.execute({
-    sql: `
-      UPDATE guests SET
-        full_name = COALESCE(?, full_name),
-        slug = COALESCE(?, slug),
-        role = COALESCE(?, role),
-        company = COALESCE(?, company),
-        short_overview = COALESCE(?, short_overview),
-        biography = COALESCE(?, biography),
-        bio = COALESCE(?, bio),
-        portrait_id = COALESCE(?, portrait_id),
-        portrait_alt = COALESCE(?, portrait_alt),
-        portrait_credit = COALESCE(?, portrait_credit),
-        links_linkedin = COALESCE(?, links_linkedin),
-        linkedin_url = COALESCE(?, linkedin_url),
-        links_website = COALESCE(?, links_website),
-        website_url = COALESCE(?, website_url),
-        links_other = COALESCE(?, links_other),
-        featured = COALESCE(?, featured),
-        status = COALESCE(?, status),
-        seo_title = COALESCE(?, seo_title),
-        seo_description = COALESCE(?, seo_description),
-        canonical_override = COALESCE(?, canonical_override),
-        updated_at = ?
-      WHERE id = ?
-    `,
-    args: [
-      data.full_name ?? null,
-      data.slug ?? null,
-      data.role ?? null,
-      data.company ?? null,
-      data.short_overview ?? null,
-      data.biography ?? null,
-      data.biography ?? null,
-      data.portrait_id ?? null,
-      data.portrait_alt ?? null,
-      data.portrait_credit ?? null,
-      data.links_linkedin ?? null,
-      data.links_linkedin ?? null,
-      data.links_website ?? null,
-      data.links_website ?? null,
-      data.links_other ?? null,
-      data.featured ? 1 : 0,
-      data.status ?? null,
-      data.seo_title ?? null,
-      data.seo_description ?? null,
-      data.canonical_override ?? null,
-      now,
-      id,
-    ],
-  });
+  try {
+    await db.execute({
+      sql: `
+        UPDATE guests SET
+          full_name = COALESCE(?, full_name),
+          slug = COALESCE(?, slug),
+          role = COALESCE(?, role),
+          company = COALESCE(?, company),
+          short_overview = COALESCE(?, short_overview),
+          biography = COALESCE(?, biography),
+          bio = COALESCE(?, bio),
+          portrait_id = COALESCE(?, portrait_id),
+          portrait_alt = COALESCE(?, portrait_alt),
+          portrait_credit = COALESCE(?, portrait_credit),
+          links_linkedin = COALESCE(?, links_linkedin),
+          linkedin_url = COALESCE(?, linkedin_url),
+          links_website = COALESCE(?, links_website),
+          website_url = COALESCE(?, website_url),
+          links_other = COALESCE(?, links_other),
+          featured = COALESCE(?, featured),
+          status = COALESCE(?, status),
+          seo_title = COALESCE(?, seo_title),
+          seo_description = COALESCE(?, seo_description),
+          canonical_override = COALESCE(?, canonical_override),
+          updated_at = ?
+        WHERE id = ?
+      `,
+      args: [
+        data.full_name ?? null,
+        data.slug ?? null,
+        data.role ?? null,
+        data.company ?? null,
+        data.short_overview ?? null,
+        data.biography ?? null,
+        data.biography ?? null,
+        data.portrait_id ?? null,
+        data.portrait_alt ?? null,
+        data.portrait_credit ?? null,
+        data.links_linkedin ?? null,
+        data.links_linkedin ?? null,
+        data.links_website ?? null,
+        data.links_website ?? null,
+        data.links_other ?? null,
+        data.featured ? 1 : 0,
+        data.status ?? null,
+        data.seo_title ?? null,
+        data.seo_description ?? null,
+        data.canonical_override ?? null,
+        now,
+        id,
+      ],
+    });
+  } catch (err: any) {
+    if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
+      await db.execute({
+        sql: `
+          UPDATE guests SET
+            full_name = COALESCE(?, full_name),
+            slug = COALESCE(?, slug),
+            role = COALESCE(?, role),
+            company = COALESCE(?, company),
+            short_overview = COALESCE(?, short_overview),
+            bio = COALESCE(?, bio),
+            portrait_id = COALESCE(?, portrait_id),
+            linkedin_url = COALESCE(?, linkedin_url),
+            website_url = COALESCE(?, website_url),
+            featured = COALESCE(?, featured),
+            status = COALESCE(?, status),
+            seo_title = COALESCE(?, seo_title),
+            seo_description = COALESCE(?, seo_description),
+            canonical_override = COALESCE(?, canonical_override),
+            updated_at = ?
+          WHERE id = ?
+        `,
+        args: [
+          data.full_name ?? null,
+          data.slug ?? null,
+          data.role ?? null,
+          data.company ?? null,
+          data.short_overview ?? null,
+          data.biography ?? null,
+          data.portrait_id ?? null,
+          data.links_linkedin ?? null,
+          data.links_website ?? null,
+          data.featured ? 1 : 0,
+          data.status ?? null,
+          data.seo_title ?? null,
+          data.seo_description ?? null,
+          data.canonical_override ?? null,
+          now,
+          id,
+        ],
+      });
+    } else {
+      throw err;
+    }
+  }
 
   if (data.topic_ids !== undefined) {
     await db.execute({

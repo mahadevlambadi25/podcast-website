@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'pg-connection-string';
+import { normalizeIsoTimestamp } from '../date';
 
 export interface ExecuteOptions {
   sql: string;
@@ -239,6 +240,28 @@ export function formatDbError(err: any, sql: string, args: any[]): FormattedDbEr
   };
 }
 
+/**
+ * Normalizes query arguments, safely converting Date objects and GMT strings to UTC ISO timestamps.
+ */
+export function normalizeSqlArgs(args: any[]): any[] {
+  return args.map((arg) => {
+    if (arg === undefined) return null;
+    if (arg instanceof Date) return arg.toISOString();
+    if (typeof arg === 'string') {
+      if (
+        arg.includes('GMT+') ||
+        arg.includes('GMT-') ||
+        arg.includes('gmt+') ||
+        arg.includes('gmt-')
+      ) {
+        const normalized = normalizeIsoTimestamp(arg);
+        if (normalized) return normalized;
+      }
+    }
+    return arg;
+  });
+}
+
 export class DatabaseClient {
   async execute<T = any>(
     input: string | ExecuteOptions
@@ -268,12 +291,7 @@ export class DatabaseClient {
 
     const adaptedSql = adaptSqlDialect(rawSql);
     const convertedSql = convertPlaceholders(adaptedSql);
-
-    // Flatten / clean args
-    const normalizedArgs = args.map((arg) => {
-      if (arg === undefined) return null;
-      return arg;
-    });
+    const normalizedArgs = normalizeSqlArgs(args);
 
     try {
       const res = await pool.query(convertedSql, normalizedArgs);

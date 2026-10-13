@@ -1,4 +1,5 @@
 import { db } from '@/lib/db/client';
+import { normalizeIsoTimestamp, toUtcIsoString } from '@/lib/date';
 
 export interface EpisodeDetail {
   id: number;
@@ -178,15 +179,15 @@ export async function listEpisodes(options: {
       thumbnail_url: r.thumbnail_url ? String(r.thumbnail_url) : undefined,
       episode_number: r.episode_number ? Number(r.episode_number) : undefined,
       season: r.season ? Number(r.season) : undefined,
-      published_at: r.published_at ? String(r.published_at) : undefined,
+      published_at: normalizeIsoTimestamp(r.published_at) || undefined,
       transcript: r.transcript ? String(r.transcript) : undefined,
       featured: Boolean(r.featured),
       status: (r.status as any) || 'draft',
       seo_title: r.seo_title ? String(r.seo_title) : undefined,
       seo_description: r.seo_description ? String(r.seo_description) : undefined,
       canonical_override: r.canonical_override ? String(r.canonical_override) : undefined,
-      updated_at: String(r.updated_at || ''),
-      created_at: String(r.created_at || ''),
+      updated_at: normalizeIsoTimestamp(r.updated_at) || '',
+      created_at: normalizeIsoTimestamp(r.created_at) || '',
       guests: guestsMap[id] || [],
       topics: topicsMap[id] || [],
       key_takeaways: [],
@@ -269,15 +270,15 @@ export async function getEpisodeById(id: number): Promise<EpisodeDetail | null> 
     thumbnail_url: r.thumbnail_url ? String(r.thumbnail_url) : undefined,
     episode_number: r.episode_number ? Number(r.episode_number) : undefined,
     season: r.season ? Number(r.season) : undefined,
-    published_at: r.published_at ? String(r.published_at) : undefined,
+    published_at: normalizeIsoTimestamp(r.published_at) || undefined,
     transcript: r.transcript ? String(r.transcript) : undefined,
     featured: Boolean(r.featured),
     status: (r.status as any) || 'draft',
     seo_title: r.seo_title ? String(r.seo_title) : undefined,
     seo_description: r.seo_description ? String(r.seo_description) : undefined,
     canonical_override: r.canonical_override ? String(r.canonical_override) : undefined,
-    updated_at: String(r.updated_at || ''),
-    created_at: String(r.created_at || ''),
+    updated_at: normalizeIsoTimestamp(r.updated_at) || '',
+    created_at: normalizeIsoTimestamp(r.created_at) || '',
     guests: guestsRes.rows.map((g) => ({
       id: Number(g.id),
       full_name: String(g.full_name),
@@ -304,7 +305,10 @@ export async function createEpisode(data: Partial<EpisodeDetail> & {
   guest_ids?: number[];
   topic_ids?: number[];
 }): Promise<number> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
+  const effectivePublishedAt = data.published_at
+    ? (normalizeIsoTimestamp(data.published_at) || now)
+    : now;
 
   const insertRes = await db.execute({
     sql: `
@@ -326,7 +330,7 @@ export async function createEpisode(data: Partial<EpisodeDetail> & {
       data.thumbnail_id || null,
       data.episode_number || null,
       data.season || null,
-      data.published_at || now,
+      effectivePublishedAt,
       data.transcript || null,
       data.featured ? 1 : 0,
       data.status || 'draft',
@@ -379,7 +383,11 @@ export async function updateEpisode(
     topic_ids?: number[];
   }
 ): Promise<void> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
+  const normalizedPublishedAt =
+    data.published_at !== undefined
+      ? (normalizeIsoTimestamp(data.published_at) || null)
+      : null;
 
   await db.execute({
     sql: `
@@ -415,7 +423,7 @@ export async function updateEpisode(
       data.thumbnail_id ?? null,
       data.episode_number ?? null,
       data.season ?? null,
-      data.published_at ?? null,
+      normalizedPublishedAt,
       data.transcript ?? null,
       data.featured ? 1 : 0,
       data.status ?? null,
@@ -481,7 +489,7 @@ export async function deleteEpisode(id: number): Promise<void> {
 }
 
 export async function publishScheduledEpisodes(): Promise<{ id: number; slug: string }[]> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
   const res = await db.execute({
     sql: `SELECT id, slug FROM episodes WHERE status = 'scheduled' AND published_at <= ? LIMIT 100`,
     args: [now],

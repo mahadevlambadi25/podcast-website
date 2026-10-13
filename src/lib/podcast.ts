@@ -1,5 +1,6 @@
 import { db } from './db/client';
 import { siteConfig } from '../config/site';
+import { normalizeIsoTimestamp, toUtcIsoString } from './date';
 import {
   searchCollections,
   SearchGuestItem,
@@ -94,8 +95,8 @@ async function formatEpisode(row: any): Promise<any> {
     episodeNumber: row.episode_number ? Number(row.episode_number) : null,
     episode_number: row.episode_number ? Number(row.episode_number) : null,
     season: row.season ? Number(row.season) : null,
-    publishedAt: row.published_at ? String(row.published_at) : new Date().toISOString(),
-    published_at: row.published_at ? String(row.published_at) : new Date().toISOString(),
+    publishedAt: normalizeIsoTimestamp(row.published_at) || toUtcIsoString(new Date()),
+    published_at: normalizeIsoTimestamp(row.published_at) || toUtcIsoString(new Date()),
     transcript: row.transcript ? String(row.transcript) : undefined,
     featured: Boolean(row.featured),
     status: row.status || 'draft',
@@ -105,8 +106,8 @@ async function formatEpisode(row: any): Promise<any> {
     seo_description: row.seo_description ? String(row.seo_description) : undefined,
     canonicalOverride: row.canonical_override ? String(row.canonical_override) : undefined,
     canonical_override: row.canonical_override ? String(row.canonical_override) : undefined,
-    updatedAt: String(row.updated_at || ''),
-    createdAt: String(row.created_at || ''),
+    updatedAt: normalizeIsoTimestamp(row.updated_at) || '',
+    createdAt: normalizeIsoTimestamp(row.created_at) || '',
     guests,
     topics,
     keyTakeaways: takeawaysRes.rows.map((t) => String(t.takeaway || '')).filter(Boolean),
@@ -184,8 +185,8 @@ async function formatGuest(row: any): Promise<any> {
       quote: String(i.quote || ''),
       context: i.context ? String(i.context) : undefined,
     })),
-    updatedAt: String(row.updated_at || ''),
-    createdAt: String(row.created_at || ''),
+    updatedAt: normalizeIsoTimestamp(row.updated_at) || '',
+    createdAt: normalizeIsoTimestamp(row.created_at) || '',
   };
 }
 
@@ -657,7 +658,7 @@ export async function executeGlobalSearch(query: string): Promise<SearchResults>
           shortSummary: String(e.short_summary || ''),
           thumbnailUrl: e.thumbnail_url ? String(e.thumbnail_url) : null,
           youtubeVideoId: e.youtube_video_id ? String(e.youtube_video_id) : null,
-          publishedAt: String(e.published_at),
+          publishedAt: normalizeIsoTimestamp(e.published_at) || '',
           guestNames: guestsRel.rows.map((g) => String(g.full_name)),
           tags: tagsRel.rows.map((t) => String(t.tag)),
           topics: topicsRel.rows.map((t) => ({ name: String(t.name), slug: String(t.slug) })),

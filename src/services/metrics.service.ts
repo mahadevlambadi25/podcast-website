@@ -1,4 +1,5 @@
 import { db } from '@/lib/db/client';
+import { normalizeIsoTimestamp } from '@/lib/date';
 
 export interface DashboardMetrics {
   counts: {
@@ -138,8 +139,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       status: String(r.status || 'draft'),
       episode_number: r.episode_number ? Number(r.episode_number) : undefined,
       season: r.season ? Number(r.season) : undefined,
-      published_at: r.published_at ? String(r.published_at) : undefined,
-      created_at: String(r.created_at || ''),
+      published_at: normalizeIsoTimestamp(r.published_at) || undefined,
+      created_at: normalizeIsoTimestamp(r.created_at) || '',
     })),
     recentNominations: recentNomRes.rows.map((r) => ({
       id: Number(r.id),

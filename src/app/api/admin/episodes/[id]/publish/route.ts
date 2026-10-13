@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getEpisodeById, updateEpisode } from '@/services/episodes.service';
 import { logActivity } from '@/services/audit.service';
+import { normalizeIsoTimestamp, toUtcIsoString } from '@/lib/date';
 
 export async function POST(
   req: NextRequest,
@@ -46,7 +47,7 @@ export async function POST(
         );
       }
 
-      const published_at = episode.published_at || new Date().toISOString();
+      const published_at = normalizeIsoTimestamp(episode.published_at) || toUtcIsoString(new Date());
       await updateEpisode(numId, {
         status: 'published',
         published_at,
@@ -96,9 +97,13 @@ export async function POST(
       if (!scheduledAt) {
         return NextResponse.json({ error: 'Scheduled date is required' }, { status: 400 });
       }
+      const normalizedScheduled = normalizeIsoTimestamp(scheduledAt);
+      if (!normalizedScheduled) {
+        return NextResponse.json({ error: 'Invalid scheduled date/time format' }, { status: 400 });
+      }
       await updateEpisode(numId, {
         status: 'scheduled',
-        published_at: scheduledAt,
+        published_at: normalizedScheduled,
       });
 
       await logActivity({
@@ -107,10 +112,10 @@ export async function POST(
         action: 'schedule',
         entity_type: 'episode',
         entity_id: numId,
-        details: `Scheduled episode "${episode.title}" for ${scheduledAt}`,
+        details: `Scheduled episode "${episode.title}" for ${normalizedScheduled}`,
       });
 
-      return NextResponse.json({ success: true, status: 'scheduled', published_at: scheduledAt });
+      return NextResponse.json({ success: true, status: 'scheduled', published_at: normalizedScheduled });
     } else {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

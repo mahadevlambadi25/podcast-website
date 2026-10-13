@@ -227,7 +227,7 @@ const MIGRATIONS = [
 ];
 
 export async function runPostgresMigrations() {
-  const connectionString = process.env.DATABASE_URL || process.env.DATABASE_URI;
+  let connectionString = process.env.DATABASE_URL || process.env.DATABASE_URI;
 
   if (!connectionString) {
     console.warn('⚠️ No DATABASE_URL or DATABASE_URI provided. Skipping PostgreSQL migration.');

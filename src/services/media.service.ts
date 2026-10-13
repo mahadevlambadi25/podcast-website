@@ -1,5 +1,6 @@
 import { db } from '@/lib/db/client';
 import { deleteMediaFile } from '@/lib/storage';
+import { normalizeIsoTimestamp, toUtcIsoString } from '@/lib/date';
 
 export interface MediaItem {
   id: number;
@@ -79,8 +80,8 @@ export async function listMedia(options: {
     height: r.height ? Number(r.height) : undefined,
     alt: r.alt ? String(r.alt) : undefined,
     caption: r.caption ? String(r.caption) : undefined,
-    created_at: String(r.created_at || ''),
-    updated_at: String(r.updated_at || ''),
+    created_at: normalizeIsoTimestamp(r.created_at) || '',
+    updated_at: normalizeIsoTimestamp(r.updated_at) || '',
     usage_count: Number(r.usage_count || 0),
   }));
 
@@ -98,19 +99,18 @@ export async function createMedia(data: {
   alt?: string;
   caption?: string;
 }): Promise<number> {
-  const now = new Date().toISOString();
+  const now = toUtcIsoString(new Date());
   const effectiveThumb = data.thumbnail_url || data.url;
 
   const res = await db.execute({
     sql: `
       INSERT INTO media (
-        filename, url, thumbnail_url, thumbnail_u_r_l, mime_type, filesize, width, height, alt, caption, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        filename, url, thumbnail_url, mime_type, filesize, width, height, alt, caption, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.filename,
       data.url,
-      effectiveThumb,
       effectiveThumb,
       data.mime_type || null,
       data.filesize || null,
@@ -156,8 +156,8 @@ export async function getMediaById(id: number): Promise<MediaItem | null> {
     height: r.height ? Number(r.height) : undefined,
     alt: r.alt ? String(r.alt) : undefined,
     caption: r.caption ? String(r.caption) : undefined,
-    created_at: String(r.created_at || ''),
-    updated_at: String(r.updated_at || ''),
+    created_at: normalizeIsoTimestamp(r.created_at) || '',
+    updated_at: normalizeIsoTimestamp(r.updated_at) || '',
     usage_count: Number(r.usage_count || 0),
   };
 }
