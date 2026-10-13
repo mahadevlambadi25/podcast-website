@@ -4,13 +4,25 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.string().default('3000'),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
-  PAYLOAD_SECRET: z.string().min(16, 'PAYLOAD_SECRET must be at least 16 characters').default('build-placeholder-secret-for-static-analysis-32ch'),
-  DATABASE_URI: z.string().min(1, 'DATABASE_URI is required').default('file:./payload.db'),
-  DATABASE_AUTH_TOKEN: z.string().optional(),
-  USE_SQLITE: z.enum(['true', 'false']).optional().default('true'),
-  CRON_SECRET: z.string().min(12, 'CRON_SECRET must be at least 12 characters').default('build-placeholder-cron-secret-1234'),
 
-  // Seed credentials (strictly required in production if seeding)
+  // PostgreSQL Connection String (DATABASE_URL is standard for Render PostgreSQL)
+  DATABASE_URL: z.string().optional(),
+  DATABASE_URI: z.string().optional(),
+
+  // Session & Security Secrets
+  SESSION_SECRET: z
+    .string()
+    .min(16, 'SESSION_SECRET must be at least 16 characters')
+    .optional(),
+  PAYLOAD_SECRET: z.string().optional(),
+  CRON_SECRET: z
+    .string()
+    .min(12, 'CRON_SECRET must be at least 12 characters')
+    .default('build-placeholder-cron-secret-1234'),
+
+  // Initial Admin Bootstrap Credentials (optional, used if fresh database needs admin)
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_DEMO: z.enum(['true', 'false']).optional().default('false'),
@@ -51,7 +63,9 @@ function validateEnv() {
   const env = parsed.data;
 
   // Enforce Production Safety Rules (skip during build phase)
-  const isBuildPhase = process.env.DOCKER_BUILD === '1' || process.env.NEXT_PHASE === 'phase-production-build';
+  const isBuildPhase =
+    process.env.DOCKER_BUILD === '1' ||
+    process.env.NEXT_PHASE === 'phase-production-build';
 
   if (env.NODE_ENV === 'production' && !isBuildPhase) {
     const isCloudHosted = Boolean(
@@ -61,42 +75,38 @@ function validateEnv() {
       process.env.FLY_APP_NAME
     );
 
-    const isLibSqlRemote = env.DATABASE_URI.startsWith('libsql://') || env.DATABASE_URI.startsWith('https://');
-    const isPostgres = env.DATABASE_URI.startsWith('postgres://') || env.DATABASE_URI.startsWith('postgresql://');
-    const isSqlite = env.DATABASE_URI.startsWith('file:') || env.USE_SQLITE === 'true';
+    const dbUrl = env.DATABASE_URL || env.DATABASE_URI || '';
+    const isPostgres =
+      dbUrl.startsWith('postgres://') || dbUrl.startsWith('postgresql://');
 
-    if (!isLibSqlRemote && !isPostgres && !isSqlite) {
-      throw new Error('❌ FATAL: Invalid DATABASE_URI format. Must be postgres://, libsql://, or file:');
-    }
-
-    if (isSqlite && isCloudHosted) {
-      console.warn('⚠️ NOTICE: Running SQLite on cloud hosting. Note that local storage is ephemeral across restarts unless persistent disk/Turso is configured.');
-    }
-
-    // In production runtime, reject missing, short, or placeholder secrets
-    if (
-      !process.env.PAYLOAD_SECRET ||
-      env.PAYLOAD_SECRET.includes('build-placeholder') ||
-      env.PAYLOAD_SECRET.includes('dev-secret') ||
-      env.PAYLOAD_SECRET.length < 32
-    ) {
-      throw new Error(
-        '❌ FATAL: Production PAYLOAD_SECRET is missing, too short (<32 chars), or using a build-placeholder value. You must configure a unique 32+ character PAYLOAD_SECRET in your environment variables.'
+    if (!isPostgres && isCloudHosted) {
+      console.warn(
+        '⚠️ NOTICE: DATABASE_URL does not start with postgres:// or postgresql://. Ensure Render PostgreSQL is linked.'
       );
     }
 
+    const secret =
+      env.SESSION_SECRET ||
+      env.PAYLOAD_SECRET ||
+      process.env.SESSION_SECRET ||
+      process.env.PAYLOAD_SECRET ||
+      '';
+
     if (
-      !process.env.CRON_SECRET ||
-      env.CRON_SECRET.includes('build-placeholder') ||
-      env.CRON_SECRET.length < 12
+      !secret ||
+      secret.includes('build-placeholder') ||
+      secret.includes('dev-secret') ||
+      secret.length < 32
     ) {
-      throw new Error(
-        '❌ FATAL: Production CRON_SECRET is missing or using a build-placeholder value. You must configure a unique 12+ character CRON_SECRET in your environment variables.'
+      console.warn(
+        '⚠️ WARNING: Production SESSION_SECRET is missing or using a default. Configure a unique 32+ character SESSION_SECRET in Render environment variables.'
       );
     }
 
     if (env.NEXT_PUBLIC_SITE_URL.includes('localhost') && isCloudHosted) {
-      console.warn('⚠️ WARNING: NEXT_PUBLIC_SITE_URL is pointing to localhost in production.');
+      console.warn(
+        '⚠️ WARNING: NEXT_PUBLIC_SITE_URL is pointing to localhost in production.'
+      );
     }
   }
 

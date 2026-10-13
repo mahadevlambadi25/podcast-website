@@ -105,10 +105,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   // 9. Publishing activity (past 6 months)
   const activityRes = await db.execute(`
-    SELECT strftime('%Y-%m', created_at) as m, COUNT(*) as cnt
+    SELECT to_char(created_at::timestamptz, 'YYYY-MM') as m, COUNT(*) as cnt
     FROM episodes
     WHERE created_at IS NOT NULL
-    GROUP BY strftime('%Y-%m', created_at)
+    GROUP BY to_char(created_at::timestamptz, 'YYYY-MM')
     ORDER BY m DESC
     LIMIT 6
   `);

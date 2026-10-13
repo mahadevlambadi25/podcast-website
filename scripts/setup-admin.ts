@@ -3,6 +3,8 @@ import path from 'path';
 import dotenv from 'dotenv';
 import readline from 'readline';
 import { Writable } from 'stream';
+import { db } from '../src/lib/db/client';
+import { hashPassword, validatePasswordStrength } from '../src/lib/auth/password';
 
 // Automatically load .env.local first, then fall back to .env
 const envLocalPath = path.resolve(process.cwd(), '.env.local');
@@ -78,251 +80,90 @@ async function promptInput(question: string, hidden: boolean = false): Promise<s
 async function main() {
   const options = parseArgs();
 
-  // Dynamic import ensures process.env is populated before src/env.ts validates
-  const { getPayload } = await import('payload');
-  const { default: configPromise } = await import('../src/payload.config');
-  const { STRONG_PASSWORD_REGEX } = await import('../src/collections/Users');
-
-  const payload = await getPayload({ config: configPromise });
-
-  // 1. List users if requested
+  // 1. List users
   if (options.list) {
-    const users = await payload.find({
-      collection: 'users',
-      showHiddenFields: true,
-      limit: 100,
-    });
-    console.log(`\n📋 Registered User(s): ${users.totalDocs}`);
-    for (const u of users.docs) {
-      const isLocked = (u as any).lockUntil && new Date((u as any).lockUntil) > new Date();
+    const res = await db.execute('SELECT id, email, role, lock_until, login_attempts FROM users ORDER BY id ASC');
+    console.log(`\n📋 Registered User(s): ${res.rows.length}`);
+    for (const u of res.rows) {
+      const isLocked = u.lock_until && new Date(u.lock_until) > new Date();
       const statusNote = isLocked ? ' [LOCKED]' : ' [ACTIVE]';
-      console.log(`  - [ID: ${u.id}] Email: ${u.email} | Role: ${u.role}${statusNote} | Attempts: ${(u as any).loginAttempts ?? 0}`);
+      console.log(`  - [ID: ${u.id}] Email: ${u.email} | Role: ${u.role}${statusNote} | Attempts: ${u.login_attempts ?? 0}`);
     }
     process.exit(0);
   }
 
-  // 2. Reset ALL admin accounts if requested
-  if (options.all) {
-    let password = (options.password as string) || process.env.ADMIN_PASSWORD;
-    if (!password) {
-      password = await promptInput('Enter New Admin Password for ALL admins: ', Boolean(process.stdin.isTTY));
-    }
-    if (!password) {
-      console.error('❌ Error: Admin password is required.');
-      process.exit(1);
-    }
-    if (!STRONG_PASSWORD_REGEX.test(password)) {
-      console.error(
-        '❌ Error: Password does not meet security requirements.\n' +
-        'It must be at least 8 characters long and include at least one letter, one number, and one special character.'
-      );
-      process.exit(1);
-    }
-
-    const adminUsers = await payload.find({
-      collection: 'users',
-      where: { role: { equals: 'admin' } },
-      showHiddenFields: true,
-      limit: 100,
-    });
-
-    console.log(`\n📋 Found ${adminUsers.totalDocs} administrator account(s) to reset.`);
-    for (const u of adminUsers.docs) {
-      const normEmail = u.email.toLowerCase().trim();
-      console.log(`--> Updating credentials for admin: ${normEmail} (ID: ${u.id})...`);
-      await payload.update({
-        collection: 'users',
-        id: u.id,
-        data: {
-          password,
-          role: 'admin',
-        },
-        overrideAccess: true,
-      });
-
-      try {
-        await payload.unlock({
-          collection: 'users',
-          data: { email: normEmail } as any,
-          overrideAccess: true,
-        });
-      } catch {
-        // best effort
-      }
-
-      try {
-        const verifyAuth = await payload.login({
-          collection: 'users',
-          data: { email: normEmail, password },
-        });
-        if (verifyAuth && verifyAuth.token) {
-          console.log(`✅ [ID: ${u.id}] ${normEmail}: Password updated, account unlocked, login verified.`);
-        } else {
-          console.warn(`⚠️ [ID: ${u.id}] ${normEmail}: Password updated, but no token returned.`);
-        }
-      } catch (authErr: any) {
-        console.error(`❌ [ID: ${u.id}] ${normEmail}: Login verification failed: ${authErr?.message || authErr}`);
-        process.exit(1);
-      }
-    }
-
-    console.log('\n🎉 All administrator accounts have been updated and verified!\n');
-    process.exit(0);
+  // 2. Email determination
+  let email = (options.email as string) || process.env.ADMIN_EMAIL || process.env.SEED_ADMIN_EMAIL;
+  if (!email && !options.all) {
+    email = await promptInput('Enter Administrator Email: ');
   }
 
-  // 3. Resolve target email
-  let email = (options.email as string) || process.env.ADMIN_EMAIL;
-  if (!email && process.stdin.isTTY) {
-    email = await promptInput('Enter Admin Email (e.g. admin@gmail.com): ');
-  }
-  if (!email) {
-    email = process.env.SEED_ADMIN_EMAIL;
-  }
-
-  if (!email) {
-    console.error('❌ Error: Admin email is required (via --email, ADMIN_EMAIL, SEED_ADMIN_EMAIL, or interactive input).');
+  if (!options.all && (!email || !email.includes('@'))) {
+    console.error('❌ Error: A valid email address is required.');
     process.exit(1);
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
+  // 3. Password determination
+  let password = (options.password as string) || process.env.ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD;
+  if (!password) {
+    password = await promptInput('Enter Administrator Password: ', Boolean(process.stdin.isTTY));
+  }
 
-  // 4. Check if user already exists
-  const existingUsers = await payload.find({
-    collection: 'users',
-    where: { email: { equals: normalizedEmail } },
-    showHiddenFields: true,
-    limit: 1,
+  if (!password) {
+    console.error('❌ Error: Administrator password cannot be empty.');
+    process.exit(1);
+  }
+
+  const passCheck = validatePasswordStrength(password);
+  if (!passCheck.valid) {
+    console.error(`❌ Error: ${passCheck.message}`);
+    process.exit(1);
+  }
+
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  const now = new Date().toISOString();
+  const { salt, hash } = await hashPassword(password);
+
+  if (options.all) {
+    const adminRes = await db.execute("SELECT id, email FROM users WHERE role = 'admin'");
+    console.log(`\n📋 Resetting ${adminRes.rows.length} administrator account(s)...`);
+    for (const a of adminRes.rows) {
+      await db.execute({
+        sql: 'UPDATE users SET salt = ?, hash = ?, login_attempts = 0, lock_until = NULL, updated_at = ? WHERE id = ?',
+        args: [salt, hash, now, a.id],
+      });
+      console.log(`  ✅ Successfully updated admin [ID: ${a.id}] (${a.email})`);
+    }
+    process.exit(0);
+  }
+
+  // Check if target user exists
+  const userRes = await db.execute({
+    sql: 'SELECT id, email, role FROM users WHERE LOWER(email) = ? LIMIT 1',
+    args: [cleanEmail],
   });
 
-  const userExists = existingUsers.totalDocs > 0;
-  const existing = userExists ? existingUsers.docs[0] : null;
-
-  // If user only wanted to unlock the account
-  if (options.unlock && userExists && existing) {
-    console.log(`--> Unlocking account for ${normalizedEmail}...`);
-    await payload.unlock({
-      collection: 'users',
-      data: { email: normalizedEmail } as any,
-      overrideAccess: true,
+  if (userRes.rows.length > 0) {
+    const existing = userRes.rows[0];
+    console.log(`\n🔄 Updating existing user [ID: ${existing.id}] (${existing.email}) to role: admin...`);
+    await db.execute({
+      sql: 'UPDATE users SET role = ?, salt = ?, hash = ?, login_attempts = 0, lock_until = NULL, updated_at = ? WHERE id = ?',
+      args: ['admin', salt, hash, now, existing.id],
     });
-    console.log(`✅ Success: Account unlocked and login attempts reset for ${normalizedEmail}.`);
-    process.exit(0);
-  }
-
-  // 5. Resolve password
-  let password = (options.password as string) || process.env.ADMIN_PASSWORD;
-
-  // Determine whether to update an existing user
-  let shouldUpdateExisting = Boolean(
-    options.reset ||
-    process.env.RESET_EXISTING_ADMIN === 'true' ||
-    options.password
-  );
-
-  if (userExists && !shouldUpdateExisting && process.stdin.isTTY) {
-    const confirm = await promptInput(`User ${normalizedEmail} exists. Do you want to update password and unlock? [Y/n]: `);
-    if (confirm.toLowerCase() === 'y' || confirm === '') {
-      shouldUpdateExisting = true;
-    } else {
-      console.log(`ℹ️ Operation cancelled. User ${normalizedEmail} remains unchanged.`);
-      process.exit(0);
-    }
-  }
-
-  // If user exists but no reset requested in non-interactive mode
-  if (userExists && !shouldUpdateExisting && !password) {
-    console.log(`ℹ️ User ${normalizedEmail} already exists (Role: ${existing?.role}).`);
-    console.log(`   To reset this user's password, run: npm run admin:setup -- --reset --email ${normalizedEmail} --password <new-password>`);
-    process.exit(0);
-  }
-
-  // Prompt for password if not provided
-  if (!password) {
-    const promptLabel = userExists
-      ? `Enter New Admin Password for ${normalizedEmail}: `
-      : `Enter Admin Password for ${normalizedEmail}: `;
-    password = await promptInput(promptLabel, Boolean(process.stdin.isTTY));
-  }
-
-  if (!password) {
-    console.error('❌ Error: Admin password is required.');
-    process.exit(1);
-  }
-
-  // 6. Validate password strength
-  if (!STRONG_PASSWORD_REGEX.test(password)) {
-    console.error(
-      '❌ Error: Password does not meet security requirements.\n' +
-      'It must be at least 8 characters long and include at least one letter, one number, and one special character.'
-    );
-    process.exit(1);
-  }
-
-  // 7. Execute create or update
-  if (userExists && existing) {
-    console.log(`--> Updating credentials and admin role for: ${normalizedEmail}...`);
-    await payload.update({
-      collection: 'users',
-      id: existing.id,
-      data: {
-        password,
-        role: 'admin',
-      },
-      overrideAccess: true,
-    });
-
-    // Explicitly unlock and reset login attempts
-    try {
-      await payload.unlock({
-        collection: 'users',
-        data: { email: normalizedEmail } as any,
-        overrideAccess: true,
-      });
-    } catch {
-      // unlock is best-effort if lock was not active
-    }
-
-    console.log(`✅ Success: Password updated and account unlocked for ${normalizedEmail}.`);
+    console.log('✅ Admin credentials updated and account unlocked successfully!');
   } else {
-    console.log(`--> Creating new admin user: ${normalizedEmail}...`);
-    await payload.create({
-      collection: 'users',
-      data: {
-        email: normalizedEmail,
-        password,
-        role: 'admin',
-      },
-      overrideAccess: true,
+    console.log(`\n➕ Creating new administrator account for: ${cleanEmail}`);
+    await db.execute({
+      sql: 'INSERT INTO users (email, role, salt, hash, login_attempts, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)',
+      args: [cleanEmail, 'admin', salt, hash, now, now],
     });
-    console.log(`✅ Success: Created new admin user ${normalizedEmail}.`);
+    console.log('✅ New administrator account created successfully!');
   }
 
-  // 8. Verify authentication using Payload's official auth engine
-  try {
-    console.log(`--> Verifying authentication with Payload auth engine...`);
-    const loginTest = await payload.login({
-      collection: 'users',
-      data: {
-        email: normalizedEmail,
-        password,
-      },
-    });
-
-    if (loginTest && loginTest.token) {
-      console.log(`✅ Verification: Authentication confirmed! Account is active and ready for login.`);
-    } else {
-      console.warn(`⚠️ Warning: Authentication check completed but no token returned.`);
-    }
-  } catch (authErr: any) {
-    console.error(`❌ Authentication verification failed: ${authErr?.message || authErr}`);
-    process.exit(1);
-  }
-
-  console.log(`\n🎉 You can now log in at: http://localhost:3000/admin using ${normalizedEmail}\n`);
   process.exit(0);
 }
 
 main().catch((err) => {
-  console.error('❌ Setup failed:', err?.message || err);
+  console.error('❌ Fatal error in setup-admin:', err);
   process.exit(1);
 });

@@ -64,12 +64,12 @@ export async function listEpisodes(options: {
   }
 
   if (options.guestId) {
-    conditions.push('e.id IN (SELECT parent_id FROM episodes_rels WHERE path = "guests" AND guests_id = ?)');
+    conditions.push("e.id IN (SELECT parent_id FROM episodes_rels WHERE path = 'guests' AND guests_id = ?)");
     args.push(options.guestId);
   }
 
   if (options.topicId) {
-    conditions.push('e.id IN (SELECT parent_id FROM episodes_rels WHERE path = "topics" AND topics_id = ?)');
+    conditions.push("e.id IN (SELECT parent_id FROM episodes_rels WHERE path = 'topics' AND topics_id = ?)");
     args.push(options.topicId);
   }
 

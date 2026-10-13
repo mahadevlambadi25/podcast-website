@@ -1,29 +1,37 @@
-import { createClient } from '@libsql/client';
-import * as path from 'path';
+import { db } from '../src/lib/db/client';
 
 async function main() {
-  const dbPath = path.resolve('payload.db');
-  const client = createClient({
-    url: `file:${dbPath}`,
-  });
+  console.log('=== POSTGRESQL DATABASE AUDIT ===\n');
 
-  console.log('=== SQLITE DATABASE AUDIT (payload.db) ===\n');
+  // List all tables in public schema
+  const tablesRes = await db.execute(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    ORDER BY table_name;
+  `);
 
-  // List all tables
-  const tablesRes = await client.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
-  );
-
-  const tables = tablesRes.rows.map((r) => r.name as string);
-  console.log(`Found ${tables.length} tables in payload.db:\n`);
+  const tables = tablesRes.rows.map((r: any) => r.table_name as string);
+  console.log(`Found ${tables.length} tables in PostgreSQL database:\n`);
 
   for (const table of tables) {
-    const countRes = await client.execute(`SELECT COUNT(*) as cnt FROM "${table}"`);
-    const count = countRes.rows[0].cnt;
+    const countRes = await db.execute(`SELECT COUNT(*) as cnt FROM "${table}"`);
+    const count = countRes.rows[0]?.cnt;
 
     // Get column details
-    const colsRes = await client.execute(`PRAGMA table_info("${table}")`);
-    const cols = colsRes.rows.map((c) => `${c.name} (${c.type})`).join(', ');
+    const colsRes = await db.execute({
+      sql: `
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ?
+        ORDER BY ordinal_position;
+      `,
+      args: [table],
+    });
+
+    const cols = colsRes.rows
+      .map((c: any) => `${c.column_name} (${c.data_type})`)
+      .join(', ');
 
     console.log(`- ${table}: ${count} rows`);
     console.log(`  Columns: ${cols}\n`);

@@ -8,7 +8,7 @@
 
 - **Public Website (`src/app/(frontend)/`):** Next.js 15 App Router with high-performance SSR/ISR, Fraunces & Inter typography, responsive YouTube facade, dynamic search, leader profiles, and audience submissions.
 - **Custom Editorial CMS (`src/app/admin/`):** Independently owned editorial control center with role-based access control, PBKDF2 authentication, and dedicated management interfaces for episodes, guests, topics, media, nominations, and site settings.
-- **Database Access Layer (`src/services/`):** Parameterized direct SQL service queries powered by `@libsql/client` (supports local SQLite `payload.db` and distributed remote [Turso](https://turso.tech)).
+- **Database Access Layer (`src/services/`):** Parameterized direct SQL service queries powered by PostgreSQL (`pg` driver with connection pooling and SSL for Render PostgreSQL).
 - **REST APIs (`src/app/api/`):** Unified REST API endpoints for administration, auth, search, nominations, contact submissions, and scheduled publishing.
 
 ---
@@ -67,7 +67,7 @@ npx tsx scripts/test-e2e-suite.ts
 ## 5. Technology Stack
 
 - **Framework:** Next.js 15.3.9 (App Router, React 19, TypeScript 5.7)
-- **Database Driver:** `@libsql/client` (SQLite / LibSQL)
+- **Database Driver:** PostgreSQL (`pg` driver with connection pooling)
 - **Styling:** Tailwind CSS 3.4 + Custom Editorial Tokens (`#0F1B2D`, `#C9A24B`, `#F7F3EB`)
 - **Typography:** `next/font` with *Fraunces* (editorial serif) and *Inter* (body)
 - **Validation:** Zod 3.23

@@ -16,7 +16,7 @@ async function ensureAuditTable() {
   if (tableEnsured) return;
   await db.execute(`
     CREATE TABLE IF NOT EXISTS audit_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER,
       user_email TEXT,
       action TEXT NOT NULL,

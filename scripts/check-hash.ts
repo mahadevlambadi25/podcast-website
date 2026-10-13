@@ -1,12 +1,16 @@
 import crypto from 'crypto';
-import { createClient } from '@libsql/client';
+import { db } from '../src/lib/db/client';
 
 async function main() {
-  const client = createClient({ url: 'file:payload.db' });
-  const res = await client.execute({
+  const res = await db.execute({
     sql: 'SELECT email, salt, hash FROM users WHERE email = ?',
     args: ['admin@gmail.com'],
   });
+
+  if (res.rows.length === 0) {
+    console.log('No user found.');
+    return;
+  }
 
   const user = res.rows[0];
   const salt = user.salt as string;

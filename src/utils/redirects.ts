@@ -1,4 +1,5 @@
 // Database redirect utilities
+import { db } from '@/lib/db/client';
 
 /**
  * Pure function to collapse a list of redirects and eliminate intermediate hops and cycles.
@@ -40,86 +41,54 @@ export function collapseRedirectMap(
 }
 
 /**
- * Database-backed redirect handler for Payload CMS afterChange hooks.
+ * Database-backed redirect handler for slug change events.
  * Automatically collapses chains and removes loops when slugs change.
  */
 export async function handleSlugRedirect(
-  payload: any,
   oldPath: string,
   newPath: string
 ): Promise<void> {
   if (!oldPath || !newPath || oldPath === newPath) return;
 
   try {
-    // 1. Break loops: Remove any reverse redirect pointing newPath -> oldPath
-    const existingReverse = await payload.find({
-      collection: 'redirects',
-      where: {
-        and: [
-          { from: { equals: newPath } },
-          { to: { equals: oldPath } },
-        ],
-      },
-      limit: 10,
-    });
+    const now = new Date().toISOString();
 
-    for (const rev of existingReverse.docs) {
-      await payload.delete({
-        collection: 'redirects',
-        id: rev.id,
-      });
-    }
+    // 1. Break loops: Remove any reverse redirect pointing newPath -> oldPath
+    await db.execute({
+      sql: 'DELETE FROM redirects WHERE "from" = ? AND "to" = ?',
+      args: [newPath, oldPath],
+    });
 
     // 2. Collapse incoming chains:
     // Any redirect where `to === oldPath` should now point directly to `newPath`
-    const incomingChains = await payload.find({
-      collection: 'redirects',
-      where: { to: { equals: oldPath } },
-      limit: 50,
+    await db.execute({
+      sql: 'UPDATE redirects SET "to" = ?, updated_at = ? WHERE "to" = ? AND "from" != ?',
+      args: [newPath, now, oldPath, newPath],
     });
 
-    for (const chain of incomingChains.docs) {
-      if (chain.from !== newPath) {
-        await payload.update({
-          collection: 'redirects',
-          id: chain.id,
-          data: { to: newPath },
-        });
-      } else {
-        await payload.delete({
-          collection: 'redirects',
-          id: chain.id,
-        });
-      }
-    }
+    // Delete any self-referencing redirect that may have been created
+    await db.execute({
+      sql: 'DELETE FROM redirects WHERE "from" = "to"',
+    });
 
     // 3. Upsert direct redirect from oldPath -> newPath
-    const existing = await payload.find({
-      collection: 'redirects',
-      where: { from: { equals: oldPath } },
-      limit: 1,
+    const existing = await db.execute({
+      sql: 'SELECT id FROM redirects WHERE "from" = ? LIMIT 1',
+      args: [oldPath],
     });
 
-    if (existing.totalDocs > 0) {
-      await payload.update({
-        collection: 'redirects',
-        id: existing.docs[0].id,
-        data: {
-          to: newPath,
-          type: '301',
-        },
+    if (existing.rows.length > 0) {
+      await db.execute({
+        sql: 'UPDATE redirects SET "to" = ?, "type" = ?, updated_at = ? WHERE id = ?',
+        args: [newPath, '301', now, existing.rows[0].id],
       });
     } else {
-      await payload.create({
-        collection: 'redirects',
-        data: {
-          from: oldPath,
-          to: newPath,
-          type: '301',
-        },
+      await db.execute({
+        sql: 'INSERT INTO redirects ("from", "to", "type", created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+        args: [oldPath, newPath, '301', now, now],
       });
     }
   } catch (err) {
-    console.error('Failed to collapse/upsert redirect in Payload CMS:', err);
+    console.error('Failed to collapse/upsert redirect:', err);
   }
 }

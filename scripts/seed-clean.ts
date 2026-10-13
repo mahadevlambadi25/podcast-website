@@ -1,87 +1,44 @@
-import fs from 'fs';
-import path from 'path';
-import dotenv from 'dotenv';
-
-// Automatically load .env.local first, then fall back to .env
-const envLocalPath = path.resolve(process.cwd(), '.env.local');
-const envPath = path.resolve(process.cwd(), '.env');
-
-if (fs.existsSync(envLocalPath)) {
-  dotenv.config({ path: envLocalPath });
-}
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-}
+import { db } from '../src/lib/db/client';
 
 async function seedClean() {
-  console.log('==> Starting cleanup of sample demo content in Unchartered CMS...');
-  const { getPayload } = await import('payload');
-  const { default: configPromise } = await import('../src/payload.config');
+  console.log('==> Starting cleanup of sample demo content in Unchartered database...');
 
-  const payload = await getPayload({ config: configPromise });
+  // 1. Delete sample episodes
+  const sampleSlugs = [
+    'the-quantum-horizon-sovereign-compute',
+    'capital-allocation-frontier-innovation',
+    'reengineering-biology-scaled-therapeutics',
+    'factory-2035-autonomous-robotics-industrial-mastery',
+  ];
 
-  // 1. Clean sample episodes
-  console.log('--> Removing sample demo episodes...');
-  const episodes = await payload.find({
-    collection: 'episodes',
-    limit: 100,
-  });
-
-  let deletedEpisodes = 0;
-  for (const ep of episodes.docs) {
-    const isSample =
-      ep.tags?.some((t: any) => t.tag === 'SAMPLE') ||
-      ep.youtubeUrl?.includes('sample-placeholder') ||
-      ep.youtubeUrl?.includes('dQw4w9WgXcQ') ||
-      ep.title.startsWith('[SAMPLE]') ||
-      [
-        'the-quantum-horizon-sovereign-compute',
-        'capital-allocation-frontier-innovation',
-        'reengineering-biology-scaled-therapeutics',
-        'factory-2035-autonomous-robotics-industrial-mastery',
-      ].includes(ep.slug);
-
-    if (isSample) {
-      await payload.delete({
-        collection: 'episodes',
-        id: ep.id,
-      });
-      deletedEpisodes++;
-      console.log(`    Deleted sample episode: ${ep.title}`);
-    }
+  for (const slug of sampleSlugs) {
+    await db.execute({
+      sql: 'DELETE FROM episodes WHERE slug = ?',
+      args: [slug],
+    });
+    console.log(`    Deleted sample episode with slug: ${slug}`);
   }
 
-  // 2. Clean sample guests
-  console.log('--> Removing sample demo guests...');
-  const guests = await payload.find({
-    collection: 'guests',
-    limit: 100,
-  });
+  // 2. Delete sample guests
+  const sampleGuestSlugs = [
+    'elena-rostova',
+    'marcus-vance',
+    'dr-aravind-chen',
+    'tariq-al-mansoor',
+  ];
 
-  let deletedGuests = 0;
-  for (const g of guests.docs) {
-    const isSampleGuest = [
-      'elena-rostova',
-      'marcus-vance',
-      'soraya-al-mansoor',
-      'thomas-sterling',
-    ].includes(g.slug);
-
-    if (isSampleGuest) {
-      await payload.delete({
-        collection: 'guests',
-        id: g.id,
-      });
-      deletedGuests++;
-      console.log(`    Deleted sample guest: ${g.fullName}`);
-    }
+  for (const slug of sampleGuestSlugs) {
+    await db.execute({
+      sql: 'DELETE FROM guests WHERE slug = ?',
+      args: [slug],
+    });
+    console.log(`    Deleted sample guest with slug: ${slug}`);
   }
 
-  console.log(`==> Seed cleanup completed: ${deletedEpisodes} episodes and ${deletedGuests} guests removed.`);
-  process.exit(0);
+  console.log('==> Sample demo content cleanup completed successfully.');
 }
 
 seedClean().catch((err) => {
-  console.error('Seed clean failed:', err);
+  console.error('❌ Clean failed:', err);
   process.exit(1);
 });
