@@ -17,8 +17,8 @@ payload.db*
 *.sqlite
 *.backup*
 backups/
-*.zip
-media/
+/media/
+/public/media/
 
 # Environment
 .env*.local

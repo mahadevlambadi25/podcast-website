@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertPlaceholders, adaptSqlDialect } from '../src/lib/db/client';
+import { convertPlaceholders, adaptSqlDialect, formatDbError, sanitizeDatabaseUrl } from '../src/lib/db/client';
 
 describe('PostgreSQL Database Client Utilities', () => {
   describe('convertPlaceholders', () => {
@@ -49,6 +49,47 @@ describe('PostgreSQL Database Client Utilities', () => {
       const sql = 'INSERT INTO topics (name, slug) VALUES (?, ?) RETURNING id, name';
       const adapted = adaptSqlDialect(sql);
       expect(adapted).toBe(sql);
+    });
+  });
+
+  describe('formatDbError', () => {
+    it('extracts error code and message from PostgreSQL errors', () => {
+      const fakePgError = {
+        message: 'password authentication failed for user "postgres"',
+        code: '28P01',
+        detail: 'User does not exist',
+      };
+      const formatted = formatDbError(fakePgError, 'SELECT * FROM users', ['admin']);
+      expect(formatted.code).toBe('28P01');
+      expect(formatted.message).toContain('password authentication failed');
+      expect(formatted.detail).toBe('User does not exist');
+      expect(formatted.args).toEqual(['admin']);
+    });
+
+    it('masks arguments in sensitive queries to prevent credential leaks', () => {
+      const fakeError = { message: 'relation does not exist', code: '42P01' };
+      const sql = 'INSERT INTO users (email, hash, salt) VALUES ($1, $2, $3)';
+      const formatted = formatDbError(fakeError, sql, ['admin@example.com', 'supersecret', 'salt123']);
+      expect(formatted.args).toEqual(['[REDACTED]', '[REDACTED]', '[REDACTED]']);
+    });
+  });
+
+  describe('sanitizeDatabaseUrl', () => {
+    it('properly encodes unencoded hash character in database password', () => {
+      const raw = 'postgresql://postgres:my#secret@localhost:5432/unchartered';
+      const sanitized = sanitizeDatabaseUrl(raw);
+      expect(sanitized).toBe('postgresql://postgres:my%23secret@localhost:5432/unchartered');
+    });
+
+    it('preserves already encoded characters in database password', () => {
+      const raw = 'postgresql://postgres:my%23secret@aws-0-eu-central-1.pooler.supabase.com:5432/postgres';
+      const sanitized = sanitizeDatabaseUrl(raw);
+      expect(sanitized).toBe(raw);
+    });
+
+    it('returns empty or non-postgres strings without breaking', () => {
+      expect(sanitizeDatabaseUrl('')).toBe('');
+      expect(sanitizeDatabaseUrl('file:./payload.db')).toBe('file:./payload.db');
     });
   });
 });

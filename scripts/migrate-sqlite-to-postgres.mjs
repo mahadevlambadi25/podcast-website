@@ -1,11 +1,23 @@
 import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { runPostgresMigrations } from './migrate-postgres.mjs';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Automatically load .env.local first, then fall back to .env for standalone script runs
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+const envPath = path.resolve(process.cwd(), '.env');
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 export async function migrateDataToPostgres() {
   const connectionString = process.env.DATABASE_URL || process.env.DATABASE_URI;
@@ -15,14 +27,20 @@ export async function migrateDataToPostgres() {
     process.exit(1);
   }
 
+  // 1. Ensure migrations are applied first
+  console.log('==> Ensuring PostgreSQL schema and migrations before data transfer...');
+  await runPostgresMigrations();
+
   const isLocalhost =
     connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
 
   const useSsl =
-    process.env.NODE_ENV === 'production' ||
-    connectionString.includes('render.com') ||
-    connectionString.includes('sslmode=') ||
-    (!isLocalhost && !connectionString.includes('sslmode=disable'));
+    connectionString.includes('sslmode=require') ||
+    (!isLocalhost &&
+      (process.env.NODE_ENV === 'production' ||
+        connectionString.includes('render.com') ||
+        connectionString.includes('supabase.co')) &&
+      !connectionString.includes('sslmode=disable'));
 
   const pool = new Pool({
     connectionString,
@@ -73,10 +91,14 @@ export async function migrateDataToPostgres() {
         const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
         const values = keys.map((k) => (row[k] === undefined ? null : row[k]));
 
-        await client.query(
-          `INSERT INTO "${table}" (${cols}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-          values
-        );
+        try {
+          await client.query(
+            `INSERT INTO "${table}" (${cols}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
+            values
+          );
+        } catch (err) {
+          console.warn(`    Notice inserting row into "${table}":`, err.message);
+        }
       }
 
       // Reset sequence

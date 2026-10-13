@@ -110,8 +110,12 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err: any) {
     console.error('Login error:', err);
+    const isDev = process.env.NODE_ENV !== 'production';
+    const message = isDev
+      ? `Database connection error: ${err?.message || 'Authentication failed'}. Please check DATABASE_URL in .env.local.`
+      : 'An unexpected server error occurred during authentication.';
     return NextResponse.json(
-      { error: 'An unexpected server error occurred during authentication.' },
+      { error: message },
       { status: 500 }
     );
   }

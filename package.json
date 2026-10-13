@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:all": "vitest run && tsx ./scripts/test-e2e.ts",
+    "test:db": "node ./scripts/test-db-connection.mjs",
+    "db:set": "node ./scripts/set-supabase-db.mjs",
     "seed": "tsx ./scripts/seed.ts",
     "seed:clean": "tsx ./scripts/seed-clean.ts",
     "admin:setup": "tsx ./scripts/setup-admin.ts"

@@ -1,5 +1,13 @@
 -- Unchartered Podcast PostgreSQL Production Schema
--- Compatible with Render PostgreSQL 14+
+-- Compatible with PostgreSQL 14+, Supabase, and Render PostgreSQL
+
+-- 0. Schema Migrations Tracking
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  id SERIAL PRIMARY KEY,
+  version TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  applied_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
 
 -- 1. Users & Authentication
 CREATE TABLE IF NOT EXISTS users (
@@ -12,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   lock_until TIMESTAMPTZ,
   reset_password_token TEXT,
   reset_password_expiration TIMESTAMPTZ,
+  reset_password_requested_at TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -26,23 +35,48 @@ CREATE TABLE IF NOT EXISTS users_sessions (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 2. Media Uploads
+CREATE INDEX IF NOT EXISTS users_sessions_token_idx ON users_sessions (token);
+CREATE INDEX IF NOT EXISTS users_sessions_user_id_idx ON users_sessions (user_id);
+
+-- 2. Media Uploads & File Metadata
 CREATE TABLE IF NOT EXISTS media (
   id SERIAL PRIMARY KEY,
-  alt TEXT,
-  caption TEXT,
   filename TEXT NOT NULL,
+  url TEXT,
+  thumbnail_url TEXT,
+  thumbnail_u_r_l TEXT,
   mime_type TEXT,
-  filesize INTEGER,
+  filesize BIGINT,
   width INTEGER,
   height INTEGER,
   focal_x NUMERIC,
   focal_y NUMERIC,
-  url TEXT,
-  thumbnail_url TEXT,
+  alt TEXT,
+  caption TEXT,
+  sizes_thumbnail_url TEXT,
+  sizes_thumbnail_width NUMERIC,
+  sizes_thumbnail_height NUMERIC,
+  sizes_thumbnail_mime_type TEXT,
+  sizes_thumbnail_filesize NUMERIC,
+  sizes_thumbnail_filename TEXT,
+  sizes_portrait_url TEXT,
+  sizes_portrait_width NUMERIC,
+  sizes_portrait_height NUMERIC,
+  sizes_portrait_mime_type TEXT,
+  sizes_portrait_filesize NUMERIC,
+  sizes_portrait_filename TEXT,
+  sizes_og_url TEXT,
+  sizes_og_width NUMERIC,
+  sizes_og_height NUMERIC,
+  sizes_og_mime_type TEXT,
+  sizes_og_filesize NUMERIC,
+  sizes_og_filename TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS media_filename_idx ON media (filename);
+CREATE INDEX IF NOT EXISTS media_created_at_idx ON media (created_at);
 
 -- 3. Topics
 CREATE TABLE IF NOT EXISTS topics (
@@ -63,12 +97,19 @@ CREATE TABLE IF NOT EXISTS guests (
   slug TEXT UNIQUE NOT NULL,
   role TEXT,
   company TEXT,
-  bio TEXT,
   short_overview TEXT,
+  biography TEXT,
+  bio TEXT,
   portrait_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+  portrait_alt TEXT,
+  portrait_credit TEXT,
+  links_linkedin TEXT,
+  links_website TEXT,
+  links_other TEXT,
   linkedin_url TEXT,
   twitter_url TEXT,
   website_url TEXT,
+  social_image_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
   featured INTEGER DEFAULT 0,
   status TEXT DEFAULT 'draft' NOT NULL,
   seo_title TEXT,
@@ -81,6 +122,7 @@ CREATE TABLE IF NOT EXISTS guests (
 CREATE INDEX IF NOT EXISTS guests_slug_idx ON guests (slug);
 CREATE INDEX IF NOT EXISTS guests_status_idx ON guests (status);
 CREATE INDEX IF NOT EXISTS guests_featured_idx ON guests (featured);
+CREATE INDEX IF NOT EXISTS guests_portrait_idx ON guests (portrait_id);
 
 CREATE TABLE IF NOT EXISTS guests_alternate_names (
   _order INTEGER NOT NULL,
@@ -111,6 +153,7 @@ CREATE TABLE IF NOT EXISTS guests_rels (
 
 CREATE INDEX IF NOT EXISTS guests_rels_parent_idx ON guests_rels (parent_id);
 CREATE INDEX IF NOT EXISTS guests_rels_topics_idx ON guests_rels (topics_id);
+CREATE INDEX IF NOT EXISTS guests_rels_path_idx ON guests_rels (path);
 
 -- 5. Episodes
 CREATE TABLE IF NOT EXISTS episodes (
@@ -123,8 +166,8 @@ CREATE TABLE IF NOT EXISTS episodes (
   short_summary TEXT,
   description TEXT,
   thumbnail_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
-  episode_number INTEGER,
-  season INTEGER,
+  episode_number NUMERIC,
+  season NUMERIC,
   published_at TIMESTAMPTZ,
   transcript TEXT,
   featured INTEGER DEFAULT 0,
@@ -140,6 +183,7 @@ CREATE INDEX IF NOT EXISTS episodes_slug_idx ON episodes (slug);
 CREATE INDEX IF NOT EXISTS episodes_status_idx ON episodes (status);
 CREATE INDEX IF NOT EXISTS episodes_published_at_idx ON episodes (published_at);
 CREATE INDEX IF NOT EXISTS episodes_featured_idx ON episodes (featured);
+CREATE INDEX IF NOT EXISTS episodes_thumbnail_idx ON episodes (thumbnail_id);
 
 CREATE TABLE IF NOT EXISTS episodes_key_takeaways (
   _order INTEGER NOT NULL,
@@ -181,6 +225,7 @@ CREATE TABLE IF NOT EXISTS episodes_rels (
 CREATE INDEX IF NOT EXISTS episodes_rels_parent_idx ON episodes_rels (parent_id);
 CREATE INDEX IF NOT EXISTS episodes_rels_guests_idx ON episodes_rels (guests_id);
 CREATE INDEX IF NOT EXISTS episodes_rels_topics_idx ON episodes_rels (topics_id);
+CREATE INDEX IF NOT EXISTS episodes_rels_path_idx ON episodes_rels (path);
 
 -- 6. Site Settings (Global singleton)
 CREATE TABLE IF NOT EXISTS site_settings (
@@ -220,6 +265,10 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS site_settings_logo_idx ON site_settings (logo_id);
+CREATE INDEX IF NOT EXISTS site_settings_default_og_idx ON site_settings (default_og_image_id);
+CREATE INDEX IF NOT EXISTS site_settings_host_portrait_idx ON site_settings (host_portrait_id);
+
 -- 7. Redirects
 CREATE TABLE IF NOT EXISTS redirects (
   id SERIAL PRIMARY KEY,
@@ -235,19 +284,23 @@ CREATE INDEX IF NOT EXISTS redirects_from_idx ON redirects ("from");
 -- 8. Nominations
 CREATE TABLE IF NOT EXISTS nominations (
   id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
   guest_name TEXT NOT NULL,
-  guest_role_company TEXT NOT NULL,
-  reason TEXT NOT NULL,
+  guest_role_company TEXT,
   profile_link TEXT,
+  reason TEXT,
   status TEXT DEFAULT 'pending',
+  internal_notes TEXT,
+  name TEXT,
+  email TEXT,
   consent INTEGER DEFAULT 1,
+  consent_timestamp TEXT,
+  email_delivery_failed INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS nominations_status_idx ON nominations (status);
+CREATE INDEX IF NOT EXISTS nominations_created_at_idx ON nominations (created_at);
 
 -- 9. Contact Messages
 CREATE TABLE IF NOT EXISTS contact_messages (
@@ -257,11 +310,15 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   message TEXT NOT NULL,
   subject TEXT,
   status TEXT DEFAULT 'unread',
+  consent INTEGER DEFAULT 1,
+  consent_timestamp TEXT,
+  email_delivery_failed INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS contact_messages_status_idx ON contact_messages (status);
+CREATE INDEX IF NOT EXISTS contact_messages_created_at_idx ON contact_messages (created_at);
 
 -- 10. Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (

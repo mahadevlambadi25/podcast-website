@@ -220,15 +220,18 @@ export async function getGuestById(id: number): Promise<GuestDetail | null> {
 
 export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: number[] }): Promise<number> {
   const now = new Date().toISOString();
+  const bioValue = data.biography || '';
+  const linkedinValue = data.links_linkedin || null;
+  const websiteValue = data.links_website || null;
 
   const insertRes = await db.execute({
     sql: `
       INSERT INTO guests (
-        full_name, slug, role, company, short_overview, biography,
-        portrait_id, portrait_alt, portrait_credit, links_linkedin,
-        links_website, links_other, featured, status, seo_title,
+        full_name, slug, role, company, short_overview, biography, bio,
+        portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
+        links_website, website_url, links_other, featured, status, seo_title,
         seo_description, canonical_override, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.full_name || 'Unnamed Guest',
@@ -236,12 +239,15 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
       data.role || '',
       data.company || null,
       data.short_overview || '',
-      data.biography || '',
+      bioValue,
+      bioValue,
       data.portrait_id || null,
       data.portrait_alt || null,
       data.portrait_credit || null,
-      data.links_linkedin || null,
-      data.links_website || null,
+      linkedinValue,
+      linkedinValue,
+      websiteValue,
+      websiteValue,
       data.links_other || null,
       data.featured ? 1 : 0,
       data.status || 'draft',
@@ -282,11 +288,14 @@ export async function updateGuest(
         company = COALESCE(?, company),
         short_overview = COALESCE(?, short_overview),
         biography = COALESCE(?, biography),
+        bio = COALESCE(?, bio),
         portrait_id = COALESCE(?, portrait_id),
         portrait_alt = COALESCE(?, portrait_alt),
         portrait_credit = COALESCE(?, portrait_credit),
         links_linkedin = COALESCE(?, links_linkedin),
+        linkedin_url = COALESCE(?, linkedin_url),
         links_website = COALESCE(?, links_website),
+        website_url = COALESCE(?, website_url),
         links_other = COALESCE(?, links_other),
         featured = COALESCE(?, featured),
         status = COALESCE(?, status),
@@ -303,10 +312,13 @@ export async function updateGuest(
       data.company ?? null,
       data.short_overview ?? null,
       data.biography ?? null,
+      data.biography ?? null,
       data.portrait_id ?? null,
       data.portrait_alt ?? null,
       data.portrait_credit ?? null,
       data.links_linkedin ?? null,
+      data.links_linkedin ?? null,
+      data.links_website ?? null,
       data.links_website ?? null,
       data.links_other ?? null,
       data.featured ? 1 : 0,

@@ -1,11 +1,11 @@
 import { db } from '@/lib/db/client';
-import fs from 'fs';
-import path from 'path';
+import { deleteMediaFile } from '@/lib/storage';
 
 export interface MediaItem {
   id: number;
   filename: string;
   url: string;
+  thumbnail_url?: string;
   mime_type?: string;
   filesize?: number;
   width?: number;
@@ -56,13 +56,13 @@ export async function listMedia(options: {
       SELECT 
         m.*,
         (
-          (SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id) +
-          (SELECT COUNT(*) FROM guests WHERE portrait_id = m.id) +
-          (SELECT COUNT(*) FROM site_settings WHERE logo_id = m.id OR host_portrait_id = m.id OR default_og_image_id = m.id)
+          COALESCE((SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id), 0) +
+          COALESCE((SELECT COUNT(*) FROM guests WHERE portrait_id = m.id), 0) +
+          COALESCE((SELECT COUNT(*) FROM site_settings WHERE logo_id = m.id OR host_portrait_id = m.id OR default_og_image_id = m.id), 0)
         ) as usage_count
       FROM media m
       WHERE ${where}
-      ORDER BY m.created_at DESC
+      ORDER BY m.created_at DESC NULLS LAST
       LIMIT ? OFFSET ?
     `,
     args: queryArgs,
@@ -72,6 +72,7 @@ export async function listMedia(options: {
     id: Number(r.id),
     filename: String(r.filename || 'media-asset'),
     url: String(r.url || `/media/${r.filename}`),
+    thumbnail_url: r.thumbnail_url ? String(r.thumbnail_url) : (r.url ? String(r.url) : `/media/${r.filename}`),
     mime_type: r.mime_type ? String(r.mime_type) : undefined,
     filesize: r.filesize ? Number(r.filesize) : undefined,
     width: r.width ? Number(r.width) : undefined,
@@ -89,6 +90,7 @@ export async function listMedia(options: {
 export async function createMedia(data: {
   filename: string;
   url: string;
+  thumbnail_url?: string;
   mime_type?: string;
   filesize?: number;
   width?: number;
@@ -97,15 +99,19 @@ export async function createMedia(data: {
   caption?: string;
 }): Promise<number> {
   const now = new Date().toISOString();
+  const effectiveThumb = data.thumbnail_url || data.url;
+
   const res = await db.execute({
     sql: `
       INSERT INTO media (
-        filename, url, mime_type, filesize, width, height, alt, caption, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        filename, url, thumbnail_url, thumbnail_u_r_l, mime_type, filesize, width, height, alt, caption, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.filename,
       data.url,
+      effectiveThumb,
+      effectiveThumb,
       data.mime_type || null,
       data.filesize || null,
       data.width || null,
@@ -126,9 +132,9 @@ export async function getMediaById(id: number): Promise<MediaItem | null> {
       SELECT 
         m.*,
         (
-          (SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id) +
-          (SELECT COUNT(*) FROM guests WHERE portrait_id = m.id) +
-          (SELECT COUNT(*) FROM site_settings WHERE logo_id = m.id OR host_portrait_id = m.id OR default_og_image_id = m.id)
+          COALESCE((SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id), 0) +
+          COALESCE((SELECT COUNT(*) FROM guests WHERE portrait_id = m.id), 0) +
+          COALESCE((SELECT COUNT(*) FROM site_settings WHERE logo_id = m.id OR host_portrait_id = m.id OR default_og_image_id = m.id), 0)
         ) as usage_count
       FROM media m
       WHERE m.id = ?
@@ -143,6 +149,7 @@ export async function getMediaById(id: number): Promise<MediaItem | null> {
     id: Number(r.id),
     filename: String(r.filename || 'media-asset'),
     url: String(r.url || `/media/${r.filename}`),
+    thumbnail_url: r.thumbnail_url ? String(r.thumbnail_url) : (r.url ? String(r.url) : `/media/${r.filename}`),
     mime_type: r.mime_type ? String(r.mime_type) : undefined,
     filesize: r.filesize ? Number(r.filesize) : undefined,
     width: r.width ? Number(r.width) : undefined,
@@ -167,7 +174,7 @@ export async function updateMedia(
 }
 
 export async function deleteMedia(id: number): Promise<{ success: boolean; error?: string }> {
-  // Check usage
+  // Check usage across episodes, guests, and site settings
   const epUsage = await db.execute({
     sql: 'SELECT id, title FROM episodes WHERE thumbnail_id = ? LIMIT 3',
     args: [id],
@@ -176,31 +183,29 @@ export async function deleteMedia(id: number): Promise<{ success: boolean; error
     sql: 'SELECT id, full_name FROM guests WHERE portrait_id = ? LIMIT 3',
     args: [id],
   });
+  const settingsUsage = await db.execute({
+    sql: 'SELECT id FROM site_settings WHERE logo_id = ? OR host_portrait_id = ? OR default_og_image_id = ? LIMIT 1',
+    args: [id, id, id],
+  });
 
-  if (epUsage.rows.length > 0 || guestUsage.rows.length > 0) {
+  if (epUsage.rows.length > 0 || guestUsage.rows.length > 0 || settingsUsage.rows.length > 0) {
     const epTitles = epUsage.rows.map((r) => `Episode "${r.title}"`).join(', ');
     const guestNames = guestUsage.rows.map((r) => `Guest "${r.full_name}"`).join(', ');
-    const refs = [epTitles, guestNames].filter(Boolean).join(' and ');
+    const settingsRef = settingsUsage.rows.length > 0 ? 'Site Settings' : '';
+    const refs = [epTitles, guestNames, settingsRef].filter(Boolean).join(' and ');
     return {
       success: false,
-      error: `Cannot delete asset: file is currently in active use by ${refs}. Please replace the thumbnail/portrait first.`,
+      error: `Cannot delete asset: file is currently in active use by ${refs}. Please replace the reference first.`,
     };
   }
 
-  // Get filename to optionally remove local file
+  // Get filename to remove physical file
   const mediaRes = await db.execute({
     sql: 'SELECT filename FROM media WHERE id = ? LIMIT 1',
     args: [id],
   });
   if (mediaRes.rows.length > 0 && mediaRes.rows[0].filename) {
-    const filePath = path.resolve(process.cwd(), 'media', String(mediaRes.rows[0].filename));
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (err) {
-        console.warn('Could not delete physical media file:', err);
-      }
-    }
+    await deleteMediaFile(String(mediaRes.rows[0].filename));
   }
 
   await db.execute({ sql: 'DELETE FROM media WHERE id = ?', args: [id] });

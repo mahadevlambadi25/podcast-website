@@ -158,16 +158,16 @@ async function formatGuest(row: any): Promise<any> {
     company: row.company ? String(row.company) : null,
     shortOverview: row.short_overview ? String(row.short_overview) : '',
     short_overview: row.short_overview ? String(row.short_overview) : '',
-    biography: row.biography ? String(row.biography) : '',
+    biography: row.biography ? String(row.biography) : (row.bio ? String(row.bio) : ''),
     portraitId: row.portrait_id ? Number(row.portrait_id) : undefined,
     portraitUrl,
     portrait: portraitUrl ? { url: portraitUrl, alt: row.portrait_alt || row.full_name } : null,
     portraitAlt: row.portrait_alt ? String(row.portrait_alt) : null,
     portraitCredit: row.portrait_credit ? String(row.portrait_credit) : null,
-    linksLinkedin: row.links_linkedin ? String(row.links_linkedin) : null,
-    links_linkedin: row.links_linkedin ? String(row.links_linkedin) : null,
-    linksWebsite: row.links_website ? String(row.links_website) : null,
-    links_website: row.links_website ? String(row.links_website) : null,
+    linksLinkedin: row.links_linkedin ? String(row.links_linkedin) : (row.linkedin_url ? String(row.linkedin_url) : null),
+    links_linkedin: row.links_linkedin ? String(row.links_linkedin) : (row.linkedin_url ? String(row.linkedin_url) : null),
+    linksWebsite: row.links_website ? String(row.links_website) : (row.website_url ? String(row.website_url) : null),
+    links_website: row.links_website ? String(row.links_website) : (row.website_url ? String(row.website_url) : null),
     linksOther: row.links_other ? String(row.links_other) : null,
     links_other: row.links_other ? String(row.links_other) : null,
     featured: Boolean(row.featured),
@@ -270,8 +270,8 @@ export async function getSiteSettings() {
       privacyPolicyContent: r.privacy_policy_content ? String(r.privacy_policy_content) : undefined,
       termsContent: r.terms_content ? String(r.terms_content) : undefined,
     };
-  } catch (err) {
-    console.error('getSiteSettings error:', err);
+  } catch (err: any) {
+    console.error('getSiteSettings error:', err?.message || err);
     return null;
   }
 }
@@ -319,8 +319,8 @@ export async function getLatestEpisode() {
 
     if (res.rows.length === 0) return null;
     return await formatEpisode(res.rows[0]);
-  } catch (err) {
-    console.error('getLatestEpisode error:', err);
+  } catch (err: any) {
+    console.error('getLatestEpisode error:', err?.message || err);
     return null;
   }
 }
@@ -401,8 +401,8 @@ export async function getPublishedEpisodes(options: {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     };
-  } catch (err) {
-    console.error('getPublishedEpisodes error:', err);
+  } catch (err: any) {
+    console.error('getPublishedEpisodes error:', err?.message || err);
     return { docs: [], totalDocs: 0, totalPages: 1, page: 1, hasNextPage: false, hasPrevPage: false };
   }
 }
@@ -422,8 +422,8 @@ export async function getEpisodeBySlug(slug: string) {
 
     if (res.rows.length === 0) return null;
     return await formatEpisode(res.rows[0]);
-  } catch (err) {
-    console.error('getEpisodeBySlug error:', err);
+  } catch (err: any) {
+    console.error('getEpisodeBySlug error:', err?.message || err);
     return null;
   }
 }
@@ -527,8 +527,8 @@ export async function getPublishedGuests(options: {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     };
-  } catch (err) {
-    console.error('getPublishedGuests error:', err);
+  } catch (err: any) {
+    console.error('getPublishedGuests error:', err?.message || err);
     return { docs: [], totalDocs: 0, totalPages: 1, page: 1, hasNextPage: false, hasPrevPage: false };
   }
 }
@@ -548,8 +548,8 @@ export async function getGuestBySlug(slug: string) {
 
     if (res.rows.length === 0) return null;
     return await formatGuest(res.rows[0]);
-  } catch (err) {
-    console.error('getGuestBySlug error:', err);
+  } catch (err: any) {
+    console.error('getGuestBySlug error:', err?.message || err);
     return null;
   }
 }
@@ -571,8 +571,8 @@ export async function getEpisodesForGuest(guestId: string | number) {
     });
 
     return await Promise.all(res.rows.map(formatEpisode));
-  } catch (err) {
-    console.error('getEpisodesForGuest error:', err);
+  } catch (err: any) {
+    console.error('getEpisodesForGuest error:', err?.message || err);
     return [];
   }
 }
@@ -666,8 +666,8 @@ export async function executeGlobalSearch(query: string): Promise<SearchResults>
     );
 
     return searchCollections(cleanQ, formattedGuests, formattedEpisodes);
-  } catch (err) {
-    console.error('executeGlobalSearch error:', err);
+  } catch (err: any) {
+    console.error('executeGlobalSearch error:', err?.message || err);
     return { query: cleanQ, guests: [], episodes: [], totalCount: 0 };
   }
 }

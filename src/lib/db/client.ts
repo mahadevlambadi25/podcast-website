@@ -1,4 +1,7 @@
-import { Pool, type QueryResult } from 'pg';
+import { Pool } from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'pg-connection-string';
 
 export interface ExecuteOptions {
   sql: string;
@@ -11,19 +14,94 @@ export interface DbResult<T = any> {
   rowCount: number;
 }
 
-let poolInstance: Pool | null = null;
+export interface FormattedDbError {
+  message: string;
+  code: string;
+  detail?: string;
+  hint?: string;
+  position?: string;
+  schema?: string;
+  table?: string;
+  column?: string;
+  sql: string;
+  args: any[];
+}
+
+const globalForDb = globalThis as unknown as { dbPool?: Pool };
+
+export function sanitizeDatabaseUrl(urlStr: string): string {
+  if (!urlStr) return urlStr;
+  const match = urlStr.match(
+    /^(postgres(?:ql)?:\/\/)([^:]+):(.*)@([^:\/@]+)(?::(\d+))?(\/.*)?$/
+  );
+  if (!match) return urlStr;
+  const [, proto, user, rawPassword, host, port, rest] = match;
+  let encodedPassword = rawPassword;
+  try {
+    encodedPassword = encodeURIComponent(decodeURIComponent(rawPassword));
+  } catch {
+    // If malformed, preserve as-is
+  }
+  return `${proto}${user}:${encodedPassword}@${host}${port ? `:${port}` : ''}${rest || ''}`;
+}
 
 export function getDatabaseUrl(): string | null {
   const url = process.env.DATABASE_URL || process.env.DATABASE_URI;
   if (!url) return null;
   // If user has SQLite file url left over in local env, ignore it for Postgres pool
   if (url.startsWith('file:')) return null;
-  return url;
+  if (url.includes('[') || url.includes(']') || url.includes('YOUR-')) {
+    console.warn(
+      '⚠️ DATABASE_URL contains unreplaced placeholder tokens. Update .env.local with your real Supabase connection string.'
+    );
+  }
+  return sanitizeDatabaseUrl(url);
+}
+
+export function getSslConfig(
+  connectionString: string
+): boolean | { rejectUnauthorized: boolean; ca?: string } {
+  const isLocalhost =
+    connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1');
+
+  const useSsl =
+    connectionString.includes('sslmode=require') ||
+    (!isLocalhost &&
+      (process.env.NODE_ENV === 'production' ||
+        connectionString.includes('render.com') ||
+        connectionString.includes('supabase.co') ||
+        connectionString.includes('pooler.supabase.com')) &&
+      !connectionString.includes('sslmode=disable'));
+
+  if (!useSsl) return false;
+
+  // Check for custom CA certificate (e.g. Supabase Root CA: prod-ca-2021.crt)
+  const caPath =
+    process.env.DATABASE_CA_CERT ||
+    process.env.SUPABASE_CA_CERT ||
+    process.env.PGSSLROOTCERT;
+  if (caPath && fs.existsSync(caPath)) {
+    try {
+      const ca = fs.readFileSync(caPath, 'utf8');
+      return { ca, rejectUnauthorized: true };
+    } catch {}
+  }
+  const defaultCertsPath = path.resolve(process.cwd(), 'certs/supabase-ca.crt');
+  if (fs.existsSync(defaultCertsPath)) {
+    try {
+      const ca = fs.readFileSync(defaultCertsPath, 'utf8');
+      return { ca, rejectUnauthorized: true };
+    } catch {}
+  }
+
+  // Encrypted TLS transit without strict self-signed chain rejection for Supabase internal CA
+  return { rejectUnauthorized: false };
 }
 
 export function getDbPool(): Pool | null {
-  if (poolInstance) {
-    return poolInstance;
+  if (globalForDb.dbPool) {
+    return globalForDb.dbPool;
   }
 
   const connectionString = getDatabaseUrl();
@@ -31,29 +109,30 @@ export function getDbPool(): Pool | null {
     return null;
   }
 
-  const isLocalhost =
-    connectionString.includes('localhost') ||
-    connectionString.includes('127.0.0.1');
+  const parsed = parse(connectionString);
+  const ssl = getSslConfig(connectionString);
 
-  const useSsl =
-    process.env.NODE_ENV === 'production' ||
-    connectionString.includes('render.com') ||
-    connectionString.includes('sslmode=') ||
-    (!isLocalhost && !connectionString.includes('sslmode=disable'));
-
-  poolInstance = new Pool({
-    connectionString,
-    ssl: useSsl ? { rejectUnauthorized: false } : false,
+  const pool = new Pool({
+    user: parsed.user || undefined,
+    password: parsed.password || undefined,
+    host: parsed.host || undefined,
+    port: parsed.port ? parseInt(parsed.port, 10) : undefined,
+    database: parsed.database || undefined,
+    ssl,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   });
 
-  poolInstance.on('error', (err) => {
-    console.error('Unexpected PostgreSQL pool client error:', err);
+  pool.on('error', (err) => {
+    console.error('Unexpected PostgreSQL pool client error:', err.message);
   });
 
-  return poolInstance;
+  if (process.env.NODE_ENV !== 'production') {
+    globalForDb.dbPool = pool;
+  }
+
+  return pool;
 }
 
 /**
@@ -137,6 +216,29 @@ export function adaptSqlDialect(sql: string): string {
   return adapted;
 }
 
+/**
+ * Safely formats PostgreSQL errors without leaking secrets or passwords.
+ */
+export function formatDbError(err: any, sql: string, args: any[]): FormattedDbError {
+  const isSensitive = /password|hash|salt|secret|token/i.test(sql);
+  const safeArgs = isSensitive
+    ? args.map(() => '[REDACTED]')
+    : args;
+
+  return {
+    message: err?.message || String(err),
+    code: err?.code || 'UNKNOWN',
+    detail: err?.detail || undefined,
+    hint: err?.hint || undefined,
+    position: err?.position || undefined,
+    schema: err?.schema || undefined,
+    table: err?.table || undefined,
+    column: err?.column || undefined,
+    sql,
+    args: safeArgs,
+  };
+}
+
 export class DatabaseClient {
   async execute<T = any>(
     input: string | ExecuteOptions
@@ -160,7 +262,7 @@ export class DatabaseClient {
       }
 
       throw new Error(
-        'DATABASE_URL is not configured. Please set the Render PostgreSQL connection URL.'
+        'DATABASE_URL is not configured. Please set the PostgreSQL connection URL.'
       );
     }
 
@@ -186,12 +288,46 @@ export class DatabaseClient {
         rowCount: res.rowCount ?? rows.length,
       };
     } catch (err: any) {
-      console.error('PostgreSQL execution error for query:', {
-        sql: convertedSql,
-        args: normalizedArgs,
-        error: err.message,
-      });
-      throw err;
+      const isBuild =
+        process.env.DOCKER_BUILD === '1' ||
+        process.env.NEXT_PHASE === 'phase-production-build';
+
+      if (isBuild) {
+        return {
+          rows: [],
+          rowCount: 0,
+        };
+      }
+
+      const formatted = formatDbError(err, convertedSql, normalizedArgs);
+
+      // Print comprehensive, human-readable error to console
+      let diagnosticHint = '';
+      if (formatted.code === '28P01') {
+        diagnosticHint = ' | Hint: Password authentication failed. Run "npm run test:db" to diagnose host, credentials, or Supabase pooler username format.';
+      } else if (formatted.code === '42703') {
+        diagnosticHint = ' | Hint: Column does not exist. Ensure migrations have run: "node ./scripts/migrate-postgres.mjs".';
+      } else if (formatted.code === '42P01') {
+        diagnosticHint = ' | Hint: Table does not exist. Ensure migrations have run: "node ./scripts/migrate-postgres.mjs".';
+      }
+
+      console.error(
+        `[PostgreSQL Error ${formatted.code}] ${formatted.message}${formatted.detail ? ` (${formatted.detail})` : ''}${diagnosticHint}\n` +
+        `  SQL: ${formatted.sql}\n` +
+        `  Args: ${JSON.stringify(formatted.args)}`
+      );
+
+      // Re-throw with enriched error object so callers never receive an empty object
+      const enrichedError = new Error(
+        `[PostgreSQL Error ${formatted.code}] ${formatted.message}${diagnosticHint}`
+      );
+      (enrichedError as any).code = formatted.code;
+      (enrichedError as any).detail = formatted.detail;
+      (enrichedError as any).hint = formatted.hint;
+      (enrichedError as any).sql = formatted.sql;
+      (enrichedError as any).args = formatted.args;
+
+      throw enrichedError;
     }
   }
 }
