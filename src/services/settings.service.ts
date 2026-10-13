@@ -1,4 +1,5 @@
 import { db } from '@/lib/db/client';
+import { invalidateSiteSettingsCache } from '@/lib/podcast';
 
 export interface SiteSettingsData {
   id: number;
@@ -177,4 +178,6 @@ export async function updateSiteSettings(data: Partial<SiteSettingsData>): Promi
       now,
     ],
   });
+
+  invalidateSiteSettingsCache();
 }

@@ -225,51 +225,17 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
   const linkedinValue = data.links_linkedin || null;
   const websiteValue = data.links_website || null;
 
-  let insertRes;
-  try {
-    insertRes = await db.execute({
-      sql: `
-        INSERT INTO guests (
-          full_name, slug, role, company, short_overview, biography, bio,
-          portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
-          links_website, website_url, links_other, featured, status, seo_title,
-          seo_description, canonical_override, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [
-        data.full_name || 'Unnamed Guest',
-        data.slug || `guest-${Date.now()}`,
-        data.role || '',
-        data.company || null,
-        data.short_overview || '',
-        bioValue,
-        bioValue,
-        data.portrait_id || null,
-        data.portrait_alt || null,
-        data.portrait_credit || null,
-        linkedinValue,
-        linkedinValue,
-        websiteValue,
-        websiteValue,
-        data.links_other || null,
-        data.featured ? 1 : 0,
-        data.status || 'draft',
-        data.seo_title || null,
-        data.seo_description || null,
-        data.canonical_override || null,
-        now,
-        now,
-      ],
-    });
-  } catch (err: any) {
-    if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
-      insertRes = await db.execute({
+  return await db.transaction(async (tx) => {
+    let insertRes;
+    try {
+      insertRes = await tx.execute({
         sql: `
           INSERT INTO guests (
-            full_name, slug, role, company, short_overview, bio,
-            portrait_id, linkedin_url, website_url, featured, status,
-            seo_title, seo_description, canonical_override, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            full_name, slug, role, company, short_overview, biography, bio,
+            portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
+            links_website, website_url, links_other, featured, status, seo_title,
+            seo_description, canonical_override, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           data.full_name || 'Unnamed Guest',
@@ -278,9 +244,15 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
           data.company || null,
           data.short_overview || '',
           bioValue,
+          bioValue,
           data.portrait_id || null,
+          data.portrait_alt || null,
+          data.portrait_credit || null,
+          linkedinValue,
           linkedinValue,
           websiteValue,
+          websiteValue,
+          data.links_other || null,
           data.featured ? 1 : 0,
           data.status || 'draft',
           data.seo_title || null,
@@ -290,23 +262,53 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
           now,
         ],
       });
-    } else {
-      throw err;
+    } catch (err: any) {
+      if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
+        insertRes = await tx.execute({
+          sql: `
+            INSERT INTO guests (
+              full_name, slug, role, company, short_overview, bio,
+              portrait_id, linkedin_url, website_url, featured, status,
+              seo_title, seo_description, canonical_override, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          args: [
+            data.full_name || 'Unnamed Guest',
+            data.slug || `guest-${Date.now()}`,
+            data.role || '',
+            data.company || null,
+            data.short_overview || '',
+            bioValue,
+            data.portrait_id || null,
+            linkedinValue,
+            websiteValue,
+            data.featured ? 1 : 0,
+            data.status || 'draft',
+            data.seo_title || null,
+            data.seo_description || null,
+            data.canonical_override || null,
+            now,
+            now,
+          ],
+        });
+      } else {
+        throw err;
+      }
     }
-  }
 
-  const newId = Number(insertRes.lastInsertRowid);
+    const newId = Number(insertRes.lastInsertRowid);
 
-  if (data.topic_ids && data.topic_ids.length > 0) {
-    for (let i = 0; i < data.topic_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO guests_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
-        args: [i + 1, newId, data.topic_ids[i]],
-      });
+    if (data.topic_ids && data.topic_ids.length > 0) {
+      for (let i = 0; i < data.topic_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO guests_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
+          args: [i + 1, newId, data.topic_ids[i]],
+        });
+      }
     }
-  }
 
-  return newId;
+    return newId;
+  });
 }
 
 export async function updateGuest(
@@ -315,61 +317,9 @@ export async function updateGuest(
 ): Promise<void> {
   const now = toUtcIsoString(new Date());
 
-  try {
-    await db.execute({
-      sql: `
-        UPDATE guests SET
-          full_name = COALESCE(?, full_name),
-          slug = COALESCE(?, slug),
-          role = COALESCE(?, role),
-          company = COALESCE(?, company),
-          short_overview = COALESCE(?, short_overview),
-          biography = COALESCE(?, biography),
-          bio = COALESCE(?, bio),
-          portrait_id = COALESCE(?, portrait_id),
-          portrait_alt = COALESCE(?, portrait_alt),
-          portrait_credit = COALESCE(?, portrait_credit),
-          links_linkedin = COALESCE(?, links_linkedin),
-          linkedin_url = COALESCE(?, linkedin_url),
-          links_website = COALESCE(?, links_website),
-          website_url = COALESCE(?, website_url),
-          links_other = COALESCE(?, links_other),
-          featured = COALESCE(?, featured),
-          status = COALESCE(?, status),
-          seo_title = COALESCE(?, seo_title),
-          seo_description = COALESCE(?, seo_description),
-          canonical_override = COALESCE(?, canonical_override),
-          updated_at = ?
-        WHERE id = ?
-      `,
-      args: [
-        data.full_name ?? null,
-        data.slug ?? null,
-        data.role ?? null,
-        data.company ?? null,
-        data.short_overview ?? null,
-        data.biography ?? null,
-        data.biography ?? null,
-        data.portrait_id ?? null,
-        data.portrait_alt ?? null,
-        data.portrait_credit ?? null,
-        data.links_linkedin ?? null,
-        data.links_linkedin ?? null,
-        data.links_website ?? null,
-        data.links_website ?? null,
-        data.links_other ?? null,
-        data.featured ? 1 : 0,
-        data.status ?? null,
-        data.seo_title ?? null,
-        data.seo_description ?? null,
-        data.canonical_override ?? null,
-        now,
-        id,
-      ],
-    });
-  } catch (err: any) {
-    if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
-      await db.execute({
+  await db.transaction(async (tx) => {
+    try {
+      await tx.execute({
         sql: `
           UPDATE guests SET
             full_name = COALESCE(?, full_name),
@@ -377,10 +327,16 @@ export async function updateGuest(
             role = COALESCE(?, role),
             company = COALESCE(?, company),
             short_overview = COALESCE(?, short_overview),
+            biography = COALESCE(?, biography),
             bio = COALESCE(?, bio),
             portrait_id = COALESCE(?, portrait_id),
+            portrait_alt = COALESCE(?, portrait_alt),
+            portrait_credit = COALESCE(?, portrait_credit),
+            links_linkedin = COALESCE(?, links_linkedin),
             linkedin_url = COALESCE(?, linkedin_url),
+            links_website = COALESCE(?, links_website),
             website_url = COALESCE(?, website_url),
+            links_other = COALESCE(?, links_other),
             featured = COALESCE(?, featured),
             status = COALESCE(?, status),
             seo_title = COALESCE(?, seo_title),
@@ -396,10 +352,16 @@ export async function updateGuest(
           data.company ?? null,
           data.short_overview ?? null,
           data.biography ?? null,
+          data.biography ?? null,
           data.portrait_id ?? null,
+          data.portrait_alt ?? null,
+          data.portrait_credit ?? null,
+          data.links_linkedin ?? null,
           data.links_linkedin ?? null,
           data.links_website ?? null,
-          data.featured ? 1 : 0,
+          data.links_website ?? null,
+          data.links_other ?? null,
+          data.featured !== undefined ? (data.featured ? 1 : 0) : null,
           data.status ?? null,
           data.seo_title ?? null,
           data.seo_description ?? null,
@@ -408,23 +370,65 @@ export async function updateGuest(
           id,
         ],
       });
-    } else {
-      throw err;
+    } catch (err: any) {
+      if (err?.code === '42703' || String(err?.message || '').includes('column "biography"')) {
+        await tx.execute({
+          sql: `
+            UPDATE guests SET
+              full_name = COALESCE(?, full_name),
+              slug = COALESCE(?, slug),
+              role = COALESCE(?, role),
+              company = COALESCE(?, company),
+              short_overview = COALESCE(?, short_overview),
+              bio = COALESCE(?, bio),
+              portrait_id = COALESCE(?, portrait_id),
+              linkedin_url = COALESCE(?, linkedin_url),
+              website_url = COALESCE(?, website_url),
+              featured = COALESCE(?, featured),
+              status = COALESCE(?, status),
+              seo_title = COALESCE(?, seo_title),
+              seo_description = COALESCE(?, seo_description),
+              canonical_override = COALESCE(?, canonical_override),
+              updated_at = ?
+            WHERE id = ?
+          `,
+          args: [
+            data.full_name ?? null,
+            data.slug ?? null,
+            data.role ?? null,
+            data.company ?? null,
+            data.short_overview ?? null,
+            data.biography ?? null,
+            data.portrait_id ?? null,
+            data.links_linkedin ?? null,
+            data.links_website ?? null,
+            data.featured !== undefined ? (data.featured ? 1 : 0) : null,
+            data.status ?? null,
+            data.seo_title ?? null,
+            data.seo_description ?? null,
+            data.canonical_override ?? null,
+            now,
+            id,
+          ],
+        });
+      } else {
+        throw err;
+      }
     }
-  }
 
-  if (data.topic_ids !== undefined) {
-    await db.execute({
-      sql: `DELETE FROM guests_rels WHERE parent_id = ? AND path = 'topics'`,
-      args: [id],
-    });
-    for (let i = 0; i < data.topic_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO guests_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
-        args: [i + 1, id, data.topic_ids[i]],
+    if (data.topic_ids !== undefined) {
+      await tx.execute({
+        sql: `DELETE FROM guests_rels WHERE parent_id = ? AND path = 'topics'`,
+        args: [id],
       });
+      for (let i = 0; i < data.topic_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO guests_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
+          args: [i + 1, id, data.topic_ids[i]],
+        });
+      }
     }
-  }
+  });
 }
 
 export async function deleteGuest(id: number): Promise<{ success: boolean; error?: string }> {
@@ -447,10 +451,12 @@ export async function deleteGuest(id: number): Promise<{ success: boolean; error
     };
   }
 
-  // Delete relationships and child tables
-  await db.execute({ sql: `DELETE FROM guests_rels WHERE parent_id = ?`, args: [id] });
-  await db.execute({ sql: `DELETE FROM guests_key_insights WHERE _parent_id = ?`, args: [id] });
-  await db.execute({ sql: `DELETE FROM guests WHERE id = ?`, args: [id] });
+  await db.transaction(async (tx) => {
+    // Delete relationships and child tables
+    await tx.execute({ sql: `DELETE FROM guests_rels WHERE parent_id = ?`, args: [id] });
+    await tx.execute({ sql: `DELETE FROM guests_key_insights WHERE _parent_id = ?`, args: [id] });
+    await tx.execute({ sql: `DELETE FROM guests WHERE id = ?`, args: [id] });
+  });
 
   return { success: true };
 }

@@ -28,6 +28,7 @@ export interface FormattedDbError {
   args: any[];
 }
 
+// Global singleton reference for connection pool reuse across all environments
 const globalForDb = globalThis as unknown as { dbPool?: Pool };
 
 export function sanitizeDatabaseUrl(urlStr: string): string {
@@ -101,6 +102,7 @@ export function getSslConfig(
 }
 
 export function getDbPool(): Pool | null {
+  // Always reuse existing pool across all environments (production & development)
   if (globalForDb.dbPool) {
     return globalForDb.dbPool;
   }
@@ -113,6 +115,12 @@ export function getDbPool(): Pool | null {
   const parsed = parse(connectionString);
   const ssl = getSslConfig(connectionString);
 
+  // Supabase Session Pooler default pool_size is 15.
+  // Configure a conservative max (default 5, configurable via DB_POOL_MAX between 1 and 7)
+  // to ensure all application instances, background workers, and admin actions never exhaust the 15-connection limit.
+  const rawMax = parseInt(process.env.DB_POOL_MAX || '5', 10);
+  const poolMax = isNaN(rawMax) || rawMax < 1 ? 5 : Math.min(rawMax, 7);
+
   const pool = new Pool({
     user: parsed.user || undefined,
     password: parsed.password || undefined,
@@ -120,20 +128,33 @@ export function getDbPool(): Pool | null {
     port: parsed.port ? parseInt(parsed.port, 10) : undefined,
     database: parsed.database || undefined,
     ssl,
-    max: 20,
-    idleTimeoutMillis: 30000,
+    max: poolMax,
+    idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true,
   });
 
   pool.on('error', (err) => {
     console.error('Unexpected PostgreSQL pool client error:', err.message);
   });
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalForDb.dbPool = pool;
-  }
+  // Store singleton on globalThis unconditionally for both production and development
+  globalForDb.dbPool = pool;
 
   return pool;
+}
+
+/**
+ * Gracefully closes the shared database connection pool (useful for test isolation and graceful shutdown).
+ */
+export async function closeDbPool(): Promise<void> {
+  if (globalForDb.dbPool) {
+    const poolToClose = globalForDb.dbPool;
+    globalForDb.dbPool = undefined;
+    if (typeof poolToClose.end === 'function') {
+      await Promise.resolve(poolToClose.end()).catch(() => {});
+    }
+  }
 }
 
 /**
@@ -346,6 +367,68 @@ export class DatabaseClient {
       (enrichedError as any).args = formatted.args;
 
       throw enrichedError;
+    }
+  }
+
+  /**
+   * Executes a series of queries within a single database transaction, ensuring the client connection
+   * is checked out from the pool and guaranteed to be released back to the pool in a finally block.
+   */
+  async transaction<T = any>(
+    callback: (tx: { execute: <R = any>(input: string | ExecuteOptions) => Promise<DbResult<R>> }) => Promise<T>
+  ): Promise<T> {
+    const pool = getDbPool();
+    if (!pool) {
+      const isTestOrBuild =
+        process.env.NODE_ENV === 'test' ||
+        process.env.DOCKER_BUILD === '1' ||
+        process.env.NEXT_PHASE === 'phase-production-build';
+
+      if (isTestOrBuild) {
+        const tx = {
+          execute: <R = any>(input: string | ExecuteOptions) => this.execute<R>(input),
+        };
+        return await callback(tx);
+      }
+
+      throw new Error('DATABASE_URL is not configured. Cannot start transaction.');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const tx = {
+        execute: async <R = any>(input: string | ExecuteOptions): Promise<DbResult<R>> => {
+          const rawSql = typeof input === 'string' ? input : input.sql;
+          const args = typeof input === 'string' ? [] : input.args || [];
+
+          const adaptedSql = adaptSqlDialect(rawSql);
+          const convertedSql = convertPlaceholders(adaptedSql);
+          const normalizedArgs = normalizeSqlArgs(args);
+
+          const res = await client.query(convertedSql, normalizedArgs);
+          const rows = (res.rows || []) as R[];
+          const firstRow: any = rows[0];
+          const lastInsertRowid =
+            firstRow && firstRow.id !== undefined ? Number(firstRow.id) : undefined;
+
+          return {
+            rows,
+            lastInsertRowid,
+            rowCount: res.rowCount ?? rows.length,
+          };
+        },
+      };
+
+      const result = await callback(tx);
+      await client.query('COMMIT');
+      return result;
+    } catch (err: any) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
     }
   }
 }

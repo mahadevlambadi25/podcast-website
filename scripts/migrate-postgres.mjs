@@ -291,6 +291,7 @@ export async function runPostgresMigrations() {
     ...parsed,
     ssl: sslConfig,
     connectionTimeoutMillis: 10000,
+    max: 1,
   });
 
   const client = await pool.connect();

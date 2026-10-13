@@ -45,6 +45,7 @@ export async function migrateDataToPostgres() {
   const pool = new Pool({
     connectionString,
     ssl: useSsl ? { rejectUnauthorized: false } : false,
+    max: 1,
   });
 
   const client = await pool.connect();

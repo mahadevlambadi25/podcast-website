@@ -310,70 +310,72 @@ export async function createEpisode(data: Partial<EpisodeDetail> & {
     ? (normalizeIsoTimestamp(data.published_at) || now)
     : now;
 
-  const insertRes = await db.execute({
-    sql: `
-      INSERT INTO episodes (
-        title, slug, youtube_url, youtube_video_id, fallback_watch_url,
-        short_summary, description, thumbnail_id, episode_number, season,
-        published_at, transcript, featured, status, seo_title, seo_description,
-        canonical_override, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    args: [
-      data.title || 'Untitled Episode',
-      data.slug || `episode-${Date.now()}`,
-      data.youtube_url || null,
-      data.youtube_video_id || null,
-      data.fallback_watch_url || null,
-      data.short_summary || '',
-      data.description || data.short_summary || '',
-      data.thumbnail_id || null,
-      data.episode_number || null,
-      data.season || null,
-      effectivePublishedAt,
-      data.transcript || null,
-      data.featured ? 1 : 0,
-      data.status || 'draft',
-      data.seo_title || null,
-      data.seo_description || null,
-      data.canonical_override || null,
-      now,
-      now,
-    ],
+  return await db.transaction(async (tx) => {
+    const insertRes = await tx.execute({
+      sql: `
+        INSERT INTO episodes (
+          title, slug, youtube_url, youtube_video_id, fallback_watch_url,
+          short_summary, description, thumbnail_id, episode_number, season,
+          published_at, transcript, featured, status, seo_title, seo_description,
+          canonical_override, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        data.title || 'Untitled Episode',
+        data.slug || `episode-${Date.now()}`,
+        data.youtube_url || null,
+        data.youtube_video_id || null,
+        data.fallback_watch_url || null,
+        data.short_summary || '',
+        data.description || data.short_summary || '',
+        data.thumbnail_id || null,
+        data.episode_number || null,
+        data.season || null,
+        effectivePublishedAt,
+        data.transcript || null,
+        data.featured ? 1 : 0,
+        data.status || 'draft',
+        data.seo_title || null,
+        data.seo_description || null,
+        data.canonical_override || null,
+        now,
+        now,
+      ],
+    });
+
+    const newId = Number(insertRes.lastInsertRowid);
+
+    // Sync relationships
+    if (data.guest_ids && data.guest_ids.length > 0) {
+      for (let i = 0; i < data.guest_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_rels ("order", parent_id, path, guests_id) VALUES (?, ?, 'guests', ?)`,
+          args: [i + 1, newId, data.guest_ids[i]],
+        });
+      }
+    }
+
+    if (data.topic_ids && data.topic_ids.length > 0) {
+      for (let i = 0; i < data.topic_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
+          args: [i + 1, newId, data.topic_ids[i]],
+        });
+      }
+    }
+
+    // Key takeaways
+    if (data.key_takeaways && data.key_takeaways.length > 0) {
+      for (let i = 0; i < data.key_takeaways.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_key_takeaways (_order, _parent_id, id, takeaway) VALUES (?, ?, ?, ?)`,
+          args: [i + 1, newId, `kt-${Date.now()}-${i}`, data.key_takeaways[i]],
+        });
+      }
+    }
+
+    return newId;
   });
-
-  const newId = Number(insertRes.lastInsertRowid);
-
-  // Sync relationships
-  if (data.guest_ids && data.guest_ids.length > 0) {
-    for (let i = 0; i < data.guest_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_rels ("order", parent_id, path, guests_id) VALUES (?, ?, 'guests', ?)`,
-        args: [i + 1, newId, data.guest_ids[i]],
-      });
-    }
-  }
-
-  if (data.topic_ids && data.topic_ids.length > 0) {
-    for (let i = 0; i < data.topic_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
-        args: [i + 1, newId, data.topic_ids[i]],
-      });
-    }
-  }
-
-  // Key takeaways
-  if (data.key_takeaways && data.key_takeaways.length > 0) {
-    for (let i = 0; i < data.key_takeaways.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_key_takeaways (_order, _parent_id, id, takeaway) VALUES (?, ?, ?, ?)`,
-        args: [i + 1, newId, `kt-${Date.now()}-${i}`, data.key_takeaways[i]],
-      });
-    }
-  }
-
-  return newId;
 }
 
 export async function updateEpisode(
@@ -389,119 +391,124 @@ export async function updateEpisode(
       ? (normalizeIsoTimestamp(data.published_at) || null)
       : null;
 
-  await db.execute({
-    sql: `
-      UPDATE episodes SET
-        title = COALESCE(?, title),
-        slug = COALESCE(?, slug),
-        youtube_url = COALESCE(?, youtube_url),
-        youtube_video_id = COALESCE(?, youtube_video_id),
-        fallback_watch_url = COALESCE(?, fallback_watch_url),
-        short_summary = COALESCE(?, short_summary),
-        description = COALESCE(?, description),
-        thumbnail_id = COALESCE(?, thumbnail_id),
-        episode_number = COALESCE(?, episode_number),
-        season = COALESCE(?, season),
-        published_at = COALESCE(?, published_at),
-        transcript = COALESCE(?, transcript),
-        featured = COALESCE(?, featured),
-        status = COALESCE(?, status),
-        seo_title = COALESCE(?, seo_title),
-        seo_description = COALESCE(?, seo_description),
-        canonical_override = COALESCE(?, canonical_override),
-        updated_at = ?
-      WHERE id = ?
-    `,
-    args: [
-      data.title ?? null,
-      data.slug ?? null,
-      data.youtube_url ?? null,
-      data.youtube_video_id ?? null,
-      data.fallback_watch_url ?? null,
-      data.short_summary ?? null,
-      data.description ?? null,
-      data.thumbnail_id ?? null,
-      data.episode_number ?? null,
-      data.season ?? null,
-      normalizedPublishedAt,
-      data.transcript ?? null,
-      data.featured ? 1 : 0,
-      data.status ?? null,
-      data.seo_title ?? null,
-      data.seo_description ?? null,
-      data.canonical_override ?? null,
-      now,
-      id,
-    ],
+  await db.transaction(async (tx) => {
+    await tx.execute({
+      sql: `
+        UPDATE episodes SET
+          title = COALESCE(?, title),
+          slug = COALESCE(?, slug),
+          youtube_url = COALESCE(?, youtube_url),
+          youtube_video_id = COALESCE(?, youtube_video_id),
+          fallback_watch_url = COALESCE(?, fallback_watch_url),
+          short_summary = COALESCE(?, short_summary),
+          description = COALESCE(?, description),
+          thumbnail_id = COALESCE(?, thumbnail_id),
+          episode_number = COALESCE(?, episode_number),
+          season = COALESCE(?, season),
+          published_at = COALESCE(?, published_at),
+          transcript = COALESCE(?, transcript),
+          featured = COALESCE(?, featured),
+          status = COALESCE(?, status),
+          seo_title = COALESCE(?, seo_title),
+          seo_description = COALESCE(?, seo_description),
+          canonical_override = COALESCE(?, canonical_override),
+          updated_at = ?
+        WHERE id = ?
+      `,
+      args: [
+        data.title ?? null,
+        data.slug ?? null,
+        data.youtube_url ?? null,
+        data.youtube_video_id ?? null,
+        data.fallback_watch_url ?? null,
+        data.short_summary ?? null,
+        data.description ?? null,
+        data.thumbnail_id ?? null,
+        data.episode_number ?? null,
+        data.season ?? null,
+        normalizedPublishedAt,
+        data.transcript ?? null,
+        data.featured !== undefined ? (data.featured ? 1 : 0) : null,
+        data.status ?? null,
+        data.seo_title ?? null,
+        data.seo_description ?? null,
+        data.canonical_override ?? null,
+        now,
+        id,
+      ],
+    });
+
+    // Update guests rels if provided
+    if (data.guest_ids !== undefined) {
+      await tx.execute({
+        sql: `DELETE FROM episodes_rels WHERE parent_id = ? AND path = 'guests'`,
+        args: [id],
+      });
+      for (let i = 0; i < data.guest_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_rels ("order", parent_id, path, guests_id) VALUES (?, ?, 'guests', ?)`,
+          args: [i + 1, id, data.guest_ids[i]],
+        });
+      }
+    }
+
+    // Update topics rels if provided
+    if (data.topic_ids !== undefined) {
+      await tx.execute({
+        sql: `DELETE FROM episodes_rels WHERE parent_id = ? AND path = 'topics'`,
+        args: [id],
+      });
+      for (let i = 0; i < data.topic_ids.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
+          args: [i + 1, id, data.topic_ids[i]],
+        });
+      }
+    }
+
+    // Update key takeaways if provided
+    if (data.key_takeaways !== undefined) {
+      await tx.execute({
+        sql: `DELETE FROM episodes_key_takeaways WHERE _parent_id = ?`,
+        args: [id],
+      });
+      for (let i = 0; i < data.key_takeaways.length; i++) {
+        await tx.execute({
+          sql: `INSERT INTO episodes_key_takeaways (_order, _parent_id, id, takeaway) VALUES (?, ?, ?, ?)`,
+          args: [i + 1, id, `kt-${Date.now()}-${i}`, data.key_takeaways[i]],
+        });
+      }
+    }
   });
-
-  // Update guests rels if provided
-  if (data.guest_ids !== undefined) {
-    await db.execute({
-      sql: `DELETE FROM episodes_rels WHERE parent_id = ? AND path = 'guests'`,
-      args: [id],
-    });
-    for (let i = 0; i < data.guest_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_rels ("order", parent_id, path, guests_id) VALUES (?, ?, 'guests', ?)`,
-        args: [i + 1, id, data.guest_ids[i]],
-      });
-    }
-  }
-
-  // Update topics rels if provided
-  if (data.topic_ids !== undefined) {
-    await db.execute({
-      sql: `DELETE FROM episodes_rels WHERE parent_id = ? AND path = 'topics'`,
-      args: [id],
-    });
-    for (let i = 0; i < data.topic_ids.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_rels ("order", parent_id, path, topics_id) VALUES (?, ?, 'topics', ?)`,
-        args: [i + 1, id, data.topic_ids[i]],
-      });
-    }
-  }
-
-  // Update key takeaways if provided
-  if (data.key_takeaways !== undefined) {
-    await db.execute({
-      sql: `DELETE FROM episodes_key_takeaways WHERE _parent_id = ?`,
-      args: [id],
-    });
-    for (let i = 0; i < data.key_takeaways.length; i++) {
-      await db.execute({
-        sql: `INSERT INTO episodes_key_takeaways (_order, _parent_id, id, takeaway) VALUES (?, ?, ?, ?)`,
-        args: [i + 1, id, `kt-${Date.now()}-${i}`, data.key_takeaways[i]],
-      });
-    }
-  }
 }
 
 export async function deleteEpisode(id: number): Promise<void> {
-  // Delete relations and child items first
-  await db.execute({ sql: 'DELETE FROM episodes_rels WHERE parent_id = ?', args: [id] });
-  await db.execute({ sql: 'DELETE FROM episodes_key_takeaways WHERE _parent_id = ?', args: [id] });
-  await db.execute({ sql: 'DELETE FROM episodes_quotes WHERE _parent_id = ?', args: [id] });
-  await db.execute({ sql: 'DELETE FROM episodes_tags WHERE _parent_id = ?', args: [id] });
-  // Delete main episode
-  await db.execute({ sql: 'DELETE FROM episodes WHERE id = ?', args: [id] });
+  await db.transaction(async (tx) => {
+    // Delete relations and child items first
+    await tx.execute({ sql: 'DELETE FROM episodes_rels WHERE parent_id = ?', args: [id] });
+    await tx.execute({ sql: 'DELETE FROM episodes_key_takeaways WHERE _parent_id = ?', args: [id] });
+    await tx.execute({ sql: 'DELETE FROM episodes_quotes WHERE _parent_id = ?', args: [id] });
+    await tx.execute({ sql: 'DELETE FROM episodes_tags WHERE _parent_id = ?', args: [id] });
+    // Delete main episode
+    await tx.execute({ sql: 'DELETE FROM episodes WHERE id = ?', args: [id] });
+  });
 }
 
 export async function publishScheduledEpisodes(): Promise<{ id: number; slug: string }[]> {
   const now = toUtcIsoString(new Date());
-  const res = await db.execute({
-    sql: `SELECT id, slug FROM episodes WHERE status = 'scheduled' AND published_at <= ? LIMIT 100`,
-    args: [now],
-  });
-  const updated: { id: number; slug: string }[] = [];
-  for (const row of res.rows) {
-    await db.execute({
-      sql: `UPDATE episodes SET status = 'published', updated_at = ? WHERE id = ?`,
-      args: [now, row.id],
+  return await db.transaction(async (tx) => {
+    const res = await tx.execute({
+      sql: `SELECT id, slug FROM episodes WHERE status = 'scheduled' AND published_at <= ? LIMIT 100`,
+      args: [now],
     });
-    updated.push({ id: Number(row.id), slug: String(row.slug) });
-  }
-  return updated;
+    if (res.rows.length === 0) return [];
+
+    await tx.execute({
+      sql: `UPDATE episodes SET status = 'published', updated_at = ? WHERE status = 'scheduled' AND published_at <= ?`,
+      args: [now, now],
+    });
+
+    return res.rows.map((row) => ({ id: Number(row.id), slug: String(row.slug) }));
+  });
 }
 
