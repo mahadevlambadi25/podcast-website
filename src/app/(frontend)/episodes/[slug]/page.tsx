@@ -20,15 +20,6 @@ interface EpisodePageProps {
   }>;
 }
 
-export async function generateStaticParams() {
-  try {
-    const { docs } = await getPublishedEpisodes({ limit: 100 });
-    return docs.map((ep: any) => ({ slug: ep.slug }));
-  } catch {
-    return [];
-  }
-}
-
 export async function generateMetadata({ params }: EpisodePageProps): Promise<Metadata> {
   const { slug } = await params;
   const episode = await getEpisodeBySlug(slug);

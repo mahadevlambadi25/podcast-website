@@ -20,6 +20,8 @@ import { getDashboardMetrics } from '@/services/metrics.service';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/layout/PageHeader';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboardPage() {
   const data = await getDashboardMetrics();
   const { counts, recentEpisodes, recentNominations, recentMessages, publishingActivity } = data;

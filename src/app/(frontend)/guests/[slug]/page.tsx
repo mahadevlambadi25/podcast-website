@@ -19,15 +19,6 @@ interface GuestPageProps {
   }>;
 }
 
-export async function generateStaticParams() {
-  try {
-    const { docs } = await getPublishedGuests({ limit: 100 });
-    return docs.map((g: any) => ({ slug: g.slug }));
-  } catch {
-    return [];
-  }
-}
-
 export async function generateMetadata({ params }: GuestPageProps): Promise<Metadata> {
   const { slug } = await params;
   const guest = await getGuestBySlug(slug);

@@ -16,6 +16,7 @@ import { Redirects } from './collections/Redirects';
 import { Nominations } from './collections/Nominations';
 import { ContactMessages } from './collections/ContactMessages';
 import { SiteSettings } from './globals/SiteSettings';
+import { migrations } from './migrations';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -61,6 +62,7 @@ const dbAdapter = usePostgres
       client: {
         url: getSqliteClientUrl(databaseUri),
       },
+      prodMigrations: migrations,
     });
 
 // Configure plugins list

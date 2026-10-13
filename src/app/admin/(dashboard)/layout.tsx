@@ -4,6 +4,8 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminHeader } from '@/components/layout/AdminHeader';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboardLayout({
   children,
 }: {

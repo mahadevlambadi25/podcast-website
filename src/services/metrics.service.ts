@@ -43,7 +43,8 @@ export interface DashboardMetrics {
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const now = new Date().toISOString();
+  try {
+    const now = new Date().toISOString();
 
   // 1. Episode status counts
   const epRes = await db.execute(`
@@ -157,4 +158,23 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     })),
     publishingActivity,
   };
+} catch (err) {
+  console.error('getDashboardMetrics error:', err);
+  return {
+    counts: {
+      totalEpisodes: 0,
+      publishedEpisodes: 0,
+      draftEpisodes: 0,
+      scheduledEpisodes: 0,
+      totalGuests: 0,
+      pendingNominations: 0,
+      unreadMessages: 0,
+      totalMedia: 0,
+    },
+    recentEpisodes: [],
+    recentNominations: [],
+    recentMessages: [],
+    publishingActivity: [],
+  };
+}
 }

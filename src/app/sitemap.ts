@@ -2,6 +2,8 @@ import { MetadataRoute } from 'next';
 import { getPublishedEpisodes, getPublishedGuests } from '@/lib/payload';
 import { siteConfig } from '@/config/site';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.siteUrl.replace(/\/$/, '');
 
@@ -77,7 +79,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     return [...staticRoutes, ...episodeRoutes, ...guestRoutes];
-  } catch {
+  } catch (err) {
+    console.error('Sitemap query error:', err);
     return staticRoutes;
   }
 }

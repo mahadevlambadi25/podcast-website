@@ -122,6 +122,17 @@ export async function ensureDatabase() {
       console.log('==> Notice: No ADMIN_EMAIL/ADMIN_PASSWORD provided in environment. No default credentials seeded.');
     }
 
+    // 6. Record baseline migration as applied so Payload recognizes schema
+    try {
+      const now = new Date().toISOString();
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO payload_migrations (name, batch, updated_at, created_at) VALUES (?, ?, ?, ?)`,
+        args: ['20261012_161400', 1, now, now],
+      });
+    } catch {
+      // payload_migrations table notice
+    }
+
     console.log('==> Database bootstrap completed successfully!');
   } catch (err) {
     console.error('❌ Failed during database bootstrap:', err);
