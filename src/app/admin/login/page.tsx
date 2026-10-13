@@ -7,7 +7,7 @@ import { BrandLogo } from '@/components/admin/BrandLogo';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,7 +96,7 @@ export default function AdminLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@gmail.com"
+                  placeholder="name@example.com"
                   className="block w-full pl-10 pr-3.5 py-2.5 bg-black/30 border border-white/15 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#C9A24B] focus:border-transparent text-sm transition-all"
                 />
               </div>
