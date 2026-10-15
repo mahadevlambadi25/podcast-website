@@ -17,8 +17,8 @@ export function Footer({ socialsOverride }: FooterProps) {
   const socials = { ...siteConfig.socials, ...socialsOverride };
 
   return (
-    <footer className="bg-[#101C2C] border-t border-white/10 text-[#DFE3E8] mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <footer className="bg-[#101C2C] border-t border-white/10 text-[#DFE3E8] mt-8 sm:mt-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand Column */}
           <div className="md:col-span-2 space-y-4">

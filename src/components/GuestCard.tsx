@@ -85,7 +85,7 @@ export function GuestCard({ guest }: GuestCardProps) {
             href={`/guests/${guest.slug}`}
             className="neu-btn px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#C6A15B] group-hover:text-[#B89248] inline-flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            View Story &amp; Episodes
+            View Story &amp; Episode
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>

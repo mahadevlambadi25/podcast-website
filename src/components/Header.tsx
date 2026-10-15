@@ -37,7 +37,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 w-full bg-[#101C2C]/95 backdrop-blur-md border-b border-white/10 shadow-lg transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+        <div className="flex items-center justify-between h-16 sm:h-18 gap-4 lg:gap-6">
           {/* Logo / Brand Editorial Wordmark */}
           <div className="flex items-center gap-3 shrink-0">
             <Link

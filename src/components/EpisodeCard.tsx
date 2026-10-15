@@ -43,7 +43,10 @@ export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps
       <div className="rounded-3xl overflow-hidden group grid grid-cols-1 lg:grid-cols-12 shadow-xl border border-[#DFE3E8] bg-white transition-all duration-300">
         {/* Large Thumbnail */}
         <div className="relative aspect-video lg:aspect-auto lg:col-span-7 overflow-hidden bg-[#EDE8DE] p-3 sm:p-4">
-          <div className="relative w-full h-full min-h-[260px] sm:min-h-[340px] rounded-2xl overflow-hidden shadow-inner">
+          <Link
+            href={`/episodes/${episode.slug}`}
+            className="relative w-full h-full min-h-[260px] sm:min-h-[340px] rounded-2xl overflow-hidden shadow-inner block group/thumb"
+          >
             <Image
               src={thumbnailUrl}
               alt={episode.thumbnail?.alt || episode.title}
@@ -52,8 +55,15 @@ export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps
               priority
               className="object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/80 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/80 via-[#101C2C]/20 to-transparent" />
             
+            {/* Play badge on thumbnail hover */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+              <div className="w-14 h-14 rounded-full neu-btn-gold flex items-center justify-center shadow-xl scale-95 group-hover/thumb:scale-105 transition-transform">
+                <Play className="w-6 h-6 fill-white translate-x-0.5" />
+              </div>
+            </div>
+
             <div className="absolute top-4 left-4 flex gap-2">
               <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider neu-pill-active shadow-sm">
                 Latest Episode
@@ -64,7 +74,7 @@ export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps
                 </span>
               )}
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Card Content */}
