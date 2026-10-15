@@ -79,8 +79,10 @@ export default async function EpisodeDetailPage({ params }: EpisodePageProps) {
     notFound();
   }
 
-  const adjacent = await getAdjacentEpisodes(episode.publishedAt);
-  const relatedRes = await getPublishedEpisodes({ limit: 3 });
+  const [adjacent, relatedRes] = await Promise.all([
+    getAdjacentEpisodes(episode.publishedAt),
+    getPublishedEpisodes({ limit: 4 }),
+  ]);
   const relatedEpisodes = relatedRes.docs.filter((e: any) => e.id !== episode.id).slice(0, 3);
 
   const publishedDate = episode.publishedAt

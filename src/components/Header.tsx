@@ -42,6 +42,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/"
+              prefetch={true}
               className="flex items-center gap-3 group focus:outline-none"
               aria-label={`${siteConfig.brandName} - Home`}
             >
@@ -102,6 +103,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={true}
                     className="ml-2 px-4 py-2 rounded-xl neu-btn-gold text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {item.label}
@@ -113,6 +115,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className={`px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all ${
                     isActive
                       ? 'bg-white/10 text-[#C6A15B] font-bold border border-[#C6A15B]/30'
@@ -174,6 +177,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   onClick={() => setMobileMenuOpen(false)}
                   className={`px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isNominate

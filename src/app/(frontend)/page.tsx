@@ -22,15 +22,11 @@ export default async function HomePage() {
     getSiteSettings(),
     getLatestEpisode(),
     getPublishedEpisodes({ limit: 7 }),
-    getPublishedGuests({ limit: 4, featuredOnly: true }),
+    getPublishedGuests({ limit: 4 }),
     getTopics(),
   ]);
 
-  // Fallback if no guests are flagged featuredOnly, load any published guests
-  const featuredGuests =
-    guestsRes.docs.length > 0
-      ? guestsRes.docs
-      : (await getPublishedGuests({ limit: 4 })).docs;
+  const featuredGuests = guestsRes.docs.slice(0, 4);
 
   // Filter out latest episode from the general grid so it doesn't duplicate, limit to 6
   const recentEpisodes = episodesRes.docs

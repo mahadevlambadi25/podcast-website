@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/client';
-import { invalidateSiteSettingsCache } from '@/lib/podcast';
+import { invalidateSiteSettingsCache, invalidatePodcastCache } from '@/lib/podcast';
 
 export interface SiteSettingsData {
   id: number;
@@ -180,4 +180,5 @@ export async function updateSiteSettings(data: Partial<SiteSettingsData>): Promi
   });
 
   invalidateSiteSettingsCache();
+  invalidatePodcastCache();
 }

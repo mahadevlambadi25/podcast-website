@@ -39,55 +39,63 @@ export function ScrollRevealProvider() {
     // 4. Create single centralized IntersectionObserver instance
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
           if (entry.isIntersecting) {
             const target = entry.target as HTMLElement;
             target.setAttribute('data-revealed', 'true');
             observer.unobserve(target);
           }
-        });
+        }
       },
       {
         root: null,
-        rootMargin: '0px 0px -40px 0px', // Trigger slightly before element enters deep into viewport
-        threshold: 0.08,
+        rootMargin: '40px 0px -20px 0px',
+        threshold: 0.05,
       }
     );
     observerRef.current = observer;
 
-    // 5. Function to scan and register unrevealed elements
+    // 5. Function to scan and register unrevealed elements with zero layout thrashing
     const scanAndObserve = () => {
-      const windowHeight = window.innerHeight;
       const elements = document.querySelectorAll<HTMLElement>(
         '[data-reveal]:not([data-revealed="true"])'
       );
-
-      elements.forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        // If element is already in the viewport or already scrolled past, reveal immediately without flicker
-        if (rect.top < windowHeight * 0.95) {
-          el.setAttribute('data-revealed', 'true');
-        } else {
-          observer.observe(el);
-        }
-      });
+      for (let i = 0; i < elements.length; i++) {
+        observer.observe(elements[i]);
+      }
     };
 
-    // Immediate synchronous scan to reveal above-the-fold elements before first paint
+    // Scan initial elements
     scanAndObserve();
 
-    // Secondary scan after next repaint for any late-rendered or layout-shifted elements
-    const animFrame = requestAnimationFrame(() => {
-      scanAndObserve();
-    });
-
-    // 6. Observe DOM mutations for dynamic content (search results, filters, async data)
+    // 6. Observe DOM mutations for dynamic content with targeted element filtering
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const mutationObserver = new MutationObserver(() => {
+    const mutationObserver = new MutationObserver((mutations) => {
+      let hasNewRevealElements = false;
+      for (let i = 0; i < mutations.length; i++) {
+        const m = mutations[i];
+        if (m.type === 'childList') {
+          for (let j = 0; j < m.addedNodes.length; j++) {
+            const node = m.addedNodes[j];
+            if (node.nodeType === 1) {
+              const el = node as HTMLElement;
+              if (el.hasAttribute?.('data-reveal') || el.querySelector?.('[data-reveal]')) {
+                hasNewRevealElements = true;
+                break;
+              }
+            }
+          }
+        }
+        if (hasNewRevealElements) break;
+      }
+
+      if (!hasNewRevealElements) return;
+
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         scanAndObserve();
-      }, 80);
+      }, 100);
     });
 
     mutationObserver.observe(document.body, {
@@ -97,7 +105,6 @@ export function ScrollRevealProvider() {
 
     // Cleanup
     return () => {
-      cancelAnimationFrame(animFrame);
       if (debounceTimer) clearTimeout(debounceTimer);
       mql.removeEventListener('change', handleMotionChange);
       observer.disconnect();

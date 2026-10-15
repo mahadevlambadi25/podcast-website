@@ -79,8 +79,10 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
     notFound();
   }
 
-  const episodes = await getEpisodesForGuest(guest.id);
-  const allGuestsRes = await getPublishedGuests({ limit: 4 });
+  const [episodes, allGuestsRes] = await Promise.all([
+    getEpisodesForGuest(guest.id),
+    getPublishedGuests({ limit: 4 }),
+  ]);
   const relatedGuests = allGuestsRes.docs.filter((g: any) => g.id !== guest.id).slice(0, 3);
 
   const portraitObj = guest.portrait && typeof guest.portrait === 'object' ? (guest.portrait as any) : null;

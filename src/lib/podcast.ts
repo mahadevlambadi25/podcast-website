@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { db } from './db/client';
 import { siteConfig } from '../config/site';
 import { normalizeIsoTimestamp, toUtcIsoString } from './date';
@@ -13,10 +14,58 @@ let cachedSiteSettings: any = null;
 let siteSettingsCacheExpiry = 0;
 let siteSettingsInFlight: Promise<any> | null = null;
 
+// Bounded in-memory TTL caching stores
+const MAX_CACHE_ENTRIES = 80;
+
+function setTimedCache<T>(cacheMap: Map<string, { data: T; expiry: number }>, key: string, data: T, ttlMs: number) {
+  if (cacheMap.size >= MAX_CACHE_ENTRIES) {
+    const firstKey = cacheMap.keys().next().value;
+    if (firstKey) cacheMap.delete(firstKey);
+  }
+  cacheMap.set(key, { data, expiry: Date.now() + ttlMs });
+}
+
+function getTimedCache<T>(cacheMap: Map<string, { data: T; expiry: number }>, key: string): T | null {
+  const item = cacheMap.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiry) {
+    cacheMap.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+const episodesQueryCache = new Map<string, { data: any; expiry: number }>();
+const guestsQueryCache = new Map<string, { data: any; expiry: number }>();
+const episodeSlugCache = new Map<string, { data: any; expiry: number }>();
+const guestSlugCache = new Map<string, { data: any; expiry: number }>();
+const guestEpisodesCache = new Map<string, { data: any; expiry: number }>();
+const adjacentEpisodesCache = new Map<string, { data: any; expiry: number }>();
+
+let cachedTopics: any[] | null = null;
+let topicsCacheExpiry = 0;
+let topicsInFlight: Promise<any[]> | null = null;
+
+let latestEpisodeCache: { data: any; expiry: number } | null = null;
+
 export function invalidateSiteSettingsCache(): void {
   cachedSiteSettings = null;
   siteSettingsCacheExpiry = 0;
   siteSettingsInFlight = null;
+}
+
+export function invalidatePodcastCache(): void {
+  invalidateSiteSettingsCache();
+  cachedTopics = null;
+  topicsCacheExpiry = 0;
+  topicsInFlight = null;
+  latestEpisodeCache = null;
+  episodesQueryCache.clear();
+  guestsQueryCache.clear();
+  episodeSlugCache.clear();
+  guestSlugCache.clear();
+  guestEpisodesCache.clear();
+  adjacentEpisodesCache.clear();
 }
 
 /**
@@ -397,22 +446,45 @@ export async function getRedirectForPath(fromPath: string): Promise<string | nul
 }
 
 export async function getTopics() {
-  try {
-    const res = await db.execute('SELECT * FROM topics ORDER BY name ASC LIMIT 100');
-    return res.rows.map((r) => ({
-      id: Number(r.id),
-      name: String(r.name),
-      slug: String(r.slug),
-      description: r.description ? String(r.description) : undefined,
-    }));
-  } catch {
-    return [];
+  const now = Date.now();
+  if (cachedTopics && now < topicsCacheExpiry) {
+    return cachedTopics;
   }
+
+  if (topicsInFlight) {
+    return await topicsInFlight;
+  }
+
+  topicsInFlight = (async () => {
+    try {
+      const res = await db.execute('SELECT * FROM topics ORDER BY name ASC LIMIT 100');
+      const parsed = res.rows.map((r) => ({
+        id: Number(r.id),
+        name: String(r.name),
+        slug: String(r.slug),
+        description: r.description ? String(r.description) : undefined,
+      }));
+      cachedTopics = parsed;
+      topicsCacheExpiry = Date.now() + 300_000; // 5 minutes TTL
+      return parsed;
+    } catch {
+      return [];
+    } finally {
+      topicsInFlight = null;
+    }
+  })();
+
+  return await topicsInFlight;
 }
 
 export async function getLatestEpisode() {
+  const now = Date.now();
+  if (latestEpisodeCache && now < latestEpisodeCache.expiry) {
+    return latestEpisodeCache.data;
+  }
+
   try {
-    const now = new Date().toISOString();
+    const nowIso = new Date().toISOString();
     const res = await db.execute({
       sql: `
         SELECT e.*, m.url as thumbnail_url
@@ -422,11 +494,13 @@ export async function getLatestEpisode() {
         ORDER BY e.published_at DESC
         LIMIT 1
       `,
-      args: [now],
+      args: [nowIso],
     });
 
     if (res.rows.length === 0) return null;
-    return await formatEpisode(res.rows[0]);
+    const formatted = await formatEpisode(res.rows[0]);
+    latestEpisodeCache = { data: formatted, expiry: Date.now() + 45_000 }; // 45 seconds TTL
+    return formatted;
   } catch (err: any) {
     console.error('getLatestEpisode error:', err?.message || err);
     return null;
@@ -440,6 +514,10 @@ export async function getPublishedEpisodes(options: {
   page?: number;
   limit?: number;
 } = {}) {
+  const cacheKey = JSON.stringify(options);
+  const cached = getTimedCache(episodesQueryCache, cacheKey);
+  if (cached) return cached;
+
   try {
     const now = new Date().toISOString();
     const page = Math.max(1, options.page || 1);
@@ -501,7 +579,7 @@ export async function getPublishedEpisodes(options: {
 
     const docs = await formatEpisodesBatch(docsRes.rows);
 
-    return {
+    const result = {
       docs,
       totalDocs,
       totalPages,
@@ -509,13 +587,19 @@ export async function getPublishedEpisodes(options: {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     };
+
+    setTimedCache(episodesQueryCache, cacheKey, result, 30_000); // 30 seconds TTL
+    return result;
   } catch (err: any) {
     console.error('getPublishedEpisodes error:', err?.message || err);
     return { docs: [], totalDocs: 0, totalPages: 1, page: 1, hasNextPage: false, hasPrevPage: false };
   }
 }
 
-export async function getEpisodeBySlug(slug: string) {
+const fetchEpisodeBySlug = async (slug: string) => {
+  const cached = getTimedCache(episodeSlugCache, slug);
+  if (cached) return cached;
+
   try {
     const res = await db.execute({
       sql: `
@@ -529,45 +613,59 @@ export async function getEpisodeBySlug(slug: string) {
     });
 
     if (res.rows.length === 0) return null;
-    return await formatEpisode(res.rows[0]);
+    const formatted = await formatEpisode(res.rows[0]);
+    if (formatted) {
+      setTimedCache(episodeSlugCache, slug, formatted, 60_000); // 60 seconds TTL
+    }
+    return formatted;
   } catch (err: any) {
     console.error('getEpisodeBySlug error:', err?.message || err);
     return null;
   }
-}
+};
+
+export const getEpisodeBySlug = cache(fetchEpisodeBySlug);
 
 export async function getAdjacentEpisodes(currentPublishedAt: string) {
+  const cached = getTimedCache(adjacentEpisodesCache, currentPublishedAt);
+  if (cached) return cached;
+
   try {
     const now = new Date().toISOString();
 
-    const prevRes = await db.execute({
-      sql: `
-        SELECT e.*, m.url as thumbnail_url
-        FROM episodes e
-        LEFT JOIN media m ON e.thumbnail_id = m.id
-        WHERE e.status = 'published' AND e.published_at < ?
-        ORDER BY e.published_at DESC
-        LIMIT 1
-      `,
-      args: [currentPublishedAt],
-    });
+    const [prevRes, nextRes] = await Promise.all([
+      db.execute({
+        sql: `
+          SELECT e.*, m.url as thumbnail_url
+          FROM episodes e
+          LEFT JOIN media m ON e.thumbnail_id = m.id
+          WHERE e.status = 'published' AND e.published_at < ?
+          ORDER BY e.published_at DESC
+          LIMIT 1
+        `,
+        args: [currentPublishedAt],
+      }),
+      db.execute({
+        sql: `
+          SELECT e.*, m.url as thumbnail_url
+          FROM episodes e
+          LEFT JOIN media m ON e.thumbnail_id = m.id
+          WHERE e.status = 'published' AND e.published_at > ? AND e.published_at <= ?
+          ORDER BY e.published_at ASC
+          LIMIT 1
+        `,
+        args: [currentPublishedAt, now],
+      }),
+    ]);
 
-    const nextRes = await db.execute({
-      sql: `
-        SELECT e.*, m.url as thumbnail_url
-        FROM episodes e
-        LEFT JOIN media m ON e.thumbnail_id = m.id
-        WHERE e.status = 'published' AND e.published_at > ? AND e.published_at <= ?
-        ORDER BY e.published_at ASC
-        LIMIT 1
-      `,
-      args: [currentPublishedAt, now],
-    });
+    const [prev, next] = await Promise.all([
+      prevRes.rows.length > 0 ? formatEpisode(prevRes.rows[0]) : null,
+      nextRes.rows.length > 0 ? formatEpisode(nextRes.rows[0]) : null,
+    ]);
 
-    const prev = prevRes.rows.length > 0 ? await formatEpisode(prevRes.rows[0]) : null;
-    const next = nextRes.rows.length > 0 ? await formatEpisode(nextRes.rows[0]) : null;
-
-    return { prev, next };
+    const result = { prev, next };
+    setTimedCache(adjacentEpisodesCache, currentPublishedAt, result, 60_000); // 60 seconds TTL
+    return result;
   } catch {
     return { prev: null, next: null };
   }
@@ -579,6 +677,10 @@ export async function getPublishedGuests(options: {
   limit?: number;
   featuredOnly?: boolean;
 } = {}) {
+  const cacheKey = JSON.stringify(options);
+  const cached = getTimedCache(guestsQueryCache, cacheKey);
+  if (cached) return cached;
+
   try {
     const page = Math.max(1, options.page || 1);
     const limit = Math.max(1, options.limit || 24);
@@ -619,7 +721,7 @@ export async function getPublishedGuests(options: {
         FROM guests g
         LEFT JOIN media m ON g.portrait_id = m.id
         WHERE ${whereClause}
-        ORDER BY g.full_name ASC
+        ORDER BY g.featured DESC, g.full_name ASC
         LIMIT ? OFFSET ?
       `,
       args: [...args, limit, offset],
@@ -627,7 +729,7 @@ export async function getPublishedGuests(options: {
 
     const docs = await formatGuestsBatch(docsRes.rows);
 
-    return {
+    const result = {
       docs,
       totalDocs,
       totalPages,
@@ -635,13 +737,19 @@ export async function getPublishedGuests(options: {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     };
+
+    setTimedCache(guestsQueryCache, cacheKey, result, 30_000); // 30 seconds TTL
+    return result;
   } catch (err: any) {
     console.error('getPublishedGuests error:', err?.message || err);
     return { docs: [], totalDocs: 0, totalPages: 1, page: 1, hasNextPage: false, hasPrevPage: false };
   }
 }
 
-export async function getGuestBySlug(slug: string) {
+const fetchGuestBySlug = async (slug: string) => {
+  const cached = getTimedCache(guestSlugCache, slug);
+  if (cached) return cached;
+
   try {
     const res = await db.execute({
       sql: `
@@ -655,14 +763,24 @@ export async function getGuestBySlug(slug: string) {
     });
 
     if (res.rows.length === 0) return null;
-    return await formatGuest(res.rows[0]);
+    const formatted = await formatGuest(res.rows[0]);
+    if (formatted) {
+      setTimedCache(guestSlugCache, slug, formatted, 60_000); // 60 seconds TTL
+    }
+    return formatted;
   } catch (err: any) {
     console.error('getGuestBySlug error:', err?.message || err);
     return null;
   }
-}
+};
+
+export const getGuestBySlug = cache(fetchGuestBySlug);
 
 export async function getEpisodesForGuest(guestId: string | number) {
+  const key = String(guestId);
+  const cached = getTimedCache(guestEpisodesCache, key);
+  if (cached) return cached;
+
   try {
     const now = new Date().toISOString();
     const res = await db.execute({
@@ -678,7 +796,9 @@ export async function getEpisodesForGuest(guestId: string | number) {
       args: [Number(guestId), now],
     });
 
-    return await formatEpisodesBatch(res.rows);
+    const formatted = await formatEpisodesBatch(res.rows);
+    setTimedCache(guestEpisodesCache, key, formatted, 60_000); // 60 seconds TTL
+    return formatted;
   } catch (err: any) {
     console.error('getEpisodesForGuest error:', err?.message || err);
     return [];
@@ -695,31 +815,31 @@ export async function executeGlobalSearch(query: string): Promise<SearchResults>
     const now = new Date().toISOString();
     const searchTerm = `%${cleanQ}%`;
 
-    // 1. Direct SQL search on guests
-    const guestsRes = await db.execute({
-      sql: `
-        SELECT g.*, m.url as portrait_url
-        FROM guests g
-        LEFT JOIN media m ON g.portrait_id = m.id
-        WHERE g.status = 'published'
-          AND (g.full_name LIKE ? OR g.role LIKE ? OR g.company LIKE ? OR g.short_overview LIKE ?)
-        LIMIT 25
-      `,
-      args: [searchTerm, searchTerm, searchTerm, searchTerm],
-    });
-
-    // 2. Direct SQL search on episodes
-    const episodesRes = await db.execute({
-      sql: `
-        SELECT e.*, m.url as thumbnail_url
-        FROM episodes e
-        LEFT JOIN media m ON e.thumbnail_id = m.id
-        WHERE e.status = 'published' AND e.published_at <= ?
-          AND (e.title LIKE ? OR e.short_summary LIKE ? OR e.description LIKE ?)
-        LIMIT 25
-      `,
-      args: [now, searchTerm, searchTerm, searchTerm],
-    });
+    // Execute guests and episodes search queries in parallel
+    const [guestsRes, episodesRes] = await Promise.all([
+      db.execute({
+        sql: `
+          SELECT g.*, m.url as portrait_url
+          FROM guests g
+          LEFT JOIN media m ON g.portrait_id = m.id
+          WHERE g.status = 'published'
+            AND (g.full_name LIKE ? OR g.role LIKE ? OR g.company LIKE ? OR g.short_overview LIKE ?)
+          LIMIT 25
+        `,
+        args: [searchTerm, searchTerm, searchTerm, searchTerm],
+      }),
+      db.execute({
+        sql: `
+          SELECT e.*, m.url as thumbnail_url
+          FROM episodes e
+          LEFT JOIN media m ON e.thumbnail_id = m.id
+          WHERE e.status = 'published' AND e.published_at <= ?
+            AND (e.title LIKE ? OR e.short_summary LIKE ? OR e.description LIKE ?)
+          LIMIT 25
+        `,
+        args: [now, searchTerm, searchTerm, searchTerm],
+      }),
+    ]);
 
     // Batch guest industries
     const guestIds = guestsRes.rows.map((g) => Number(g.id)).filter(Boolean);

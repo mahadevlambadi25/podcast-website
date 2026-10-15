@@ -59,22 +59,22 @@ export function Footer({ socialsOverride }: FooterProps) {
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/episodes" className="text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/episodes" prefetch={true} className="text-[#8E9CAE] hover:text-white transition-colors">
                   All Episodes
                 </Link>
               </li>
               <li>
-                <Link href="/guests" className="text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/guests" prefetch={true} className="text-[#8E9CAE] hover:text-white transition-colors">
                   Guest Directory
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/about" prefetch={true} className="text-[#8E9CAE] hover:text-white transition-colors">
                   About the Show
                 </Link>
               </li>
               <li>
-                <Link href="/nominate-a-leader" className="text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/nominate-a-leader" prefetch={true} className="text-[#8E9CAE] hover:text-white transition-colors">
                   Nominate a Leader
                 </Link>
               </li>
@@ -121,13 +121,13 @@ export function Footer({ socialsOverride }: FooterProps) {
                 </a>
               )}
               <div className="pt-3 border-t border-white/10 space-y-2">
-                <Link href="/contact" className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/contact" prefetch={true} className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
                   Contact Editorial
                 </Link>
-                <Link href="/privacy-policy" className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/privacy-policy" prefetch={true} className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
-                <Link href="/terms" className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
+                <Link href="/terms" prefetch={true} className="block text-xs text-[#8E9CAE] hover:text-white transition-colors">
                   Terms of Service
                 </Link>
                 <PrivacySettingsButton />

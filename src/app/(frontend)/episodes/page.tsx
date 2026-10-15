@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Compass, Filter, RefreshCw } from 'lucide-react';
 import { siteConfig } from '@/config/site';
-import { getPublishedEpisodes, getTopics, getPublishedGuests } from '@/lib/payload';
+import { getPublishedEpisodes, getTopics } from '@/lib/payload';
 import { EpisodeCard } from '@/components/EpisodeCard';
 import { SearchBar } from '@/components/SearchBar';
 import { TopicChips } from '@/components/TopicChips';
@@ -31,7 +31,7 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
   const guestSlug = params.guest;
   const yearFilter = params.year;
 
-  const [episodesData, allTopics, allGuestsRes] = await Promise.all([
+  const [episodesData, allTopics] = await Promise.all([
     getPublishedEpisodes({
       topicSlug,
       guestSlug,
@@ -40,7 +40,6 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
       limit: 9,
     }),
     getTopics(),
-    getPublishedGuests({ limit: 100 }),
   ]);
 
   // Extract available years from published episodes for dynamic year filtering
