@@ -23,9 +23,11 @@ export default async function AdminDashboardLayout({
       <AdminSidebar currentUser={user} />
 
       {/* Main Column */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Editorial Top Bar */}
-        <AdminHeader currentUser={user} />
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F7F3EB]">
+        {/* Editorial Top Bar (anchored with seamless navy background) */}
+        <div className="bg-[#0F1B2D]">
+          <AdminHeader currentUser={user} />
+        </div>
 
         {/* Workspace Canvas */}
         <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">

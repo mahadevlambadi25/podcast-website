@@ -88,7 +88,11 @@ if (hasPlaceholders) {
 }
 
 // 2. Safe Parsing (NEVER logs credentials)
-const sanitizedUrl = sanitizeDatabaseUrl(connectionString);
+let sanitizedUrl = sanitizeDatabaseUrl(connectionString);
+if (sanitizedUrl.includes('sslmode=') && !sanitizedUrl.includes('uselibpqcompat=')) {
+  const separator = sanitizedUrl.includes('?') ? '&' : '?';
+  sanitizedUrl = `${sanitizedUrl}${separator}uselibpqcompat=true`;
+}
 let parsedUrl;
 let parseError = null;
 

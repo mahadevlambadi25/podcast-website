@@ -23,6 +23,9 @@ import {
   Globe,
   Radio,
   Loader2,
+  Image as ImageIcon,
+  UploadCloud,
+  X,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { Badge } from '@/components/ui/badge';
@@ -50,11 +53,81 @@ export function EpisodeEditor({ initialData, isNew = false }: EpisodeEditorProps
   const [season, setSeason] = useState(initialData?.season ?? '');
   const [featured, setFeatured] = useState(Boolean(initialData?.featured));
 
-  // Media
+  // Media & Cover Artwork
   const [youtubeUrl, setYoutubeUrl] = useState(initialData?.youtube_url || '');
   const [youtubeVideoId, setYoutubeVideoId] = useState(initialData?.youtube_video_id || '');
   const [fallbackWatchUrl, setFallbackWatchUrl] = useState(initialData?.fallback_watch_url || '');
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialData?.thumbnail_url || '');
+  const [thumbnailId, setThumbnailId] = useState<number | null>(
+    initialData?.thumbnail_id ? Number(initialData.thumbnail_id) : null
+  );
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>(initialData?.thumbnail_url || '');
+
+  // Media Library Picker Modal State
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [mediaLibrary, setMediaLibrary] = useState<any[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [mediaSearch, setMediaSearch] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  const openMediaModal = async () => {
+    setIsMediaModalOpen(true);
+    setIsLoadingMedia(true);
+    try {
+      const res = await fetch('/api/admin/media?limit=60');
+      if (res.ok) {
+        const data = await res.json();
+        setMediaLibrary(data.docs || []);
+      }
+    } catch {
+      // Ignore network errors in modal load
+    } finally {
+      setIsLoadingMedia(false);
+    }
+  };
+
+  const handleSelectMedia = (asset: any) => {
+    setThumbnailId(asset.id);
+    setThumbnailUrl(asset.url || asset.thumbnail_url || `/media/${asset.filename}`);
+    setIsMediaModalOpen(false);
+    success('Cover Artwork Selected', `"${asset.filename}" set as episode cover.`);
+  };
+
+  const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingMedia(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('alt', `${title || 'Episode'} cover artwork`);
+
+      const res = await fetch('/api/admin/media', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload image');
+
+      setThumbnailId(data.id);
+      setThumbnailUrl(data.url || data.thumbnail_url || `/media/${data.filename}`);
+      success('Image Uploaded', 'New media asset created and set as cover artwork.');
+      if (isMediaModalOpen) {
+        setIsMediaModalOpen(false);
+      }
+    } catch (err: any) {
+      toastError('Upload Failed', err.message);
+    } finally {
+      setIsUploadingMedia(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setThumbnailId(null);
+    setThumbnailUrl('');
+    success('Cover Removed', 'Episode cover artwork cleared.');
+  };
 
   // Relationships
   const [selectedGuestIds, setSelectedGuestIds] = useState<number[]>(
@@ -154,6 +227,7 @@ export function EpisodeEditor({ initialData, isNew = false }: EpisodeEditorProps
         slug: slug.trim() || generateSlug(title),
         short_summary: shortSummary.trim() || null,
         description: description.trim() || null,
+        thumbnail_id: thumbnailId,
         episode_number: episodeNumber ? Number(episodeNumber) : null,
         season: season ? Number(season) : null,
         featured,
@@ -457,6 +531,90 @@ export function EpisodeEditor({ initialData, isNew = false }: EpisodeEditorProps
         {/* TAB B: Media & Playback */}
         {activeTab === 'media' && (
           <div className="space-y-6 animate-in fade-in">
+            {/* Episode Cover Artwork / Thumbnail */}
+            <div className="pb-6 border-b border-slate-100">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                Episode Cover Artwork & Thumbnail
+              </label>
+              <p className="text-xs text-slate-500 mb-4">
+                This image represents the episode on the homepage, episode catalog, podcast directory cards, and OpenGraph social embeds.
+              </p>
+
+              {thumbnailUrl ? (
+                <div className="space-y-3">
+                  <div className="relative aspect-video max-w-md rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-md group">
+                    <img
+                      src={thumbnailUrl}
+                      alt={title || 'Episode cover artwork'}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="text-white text-xs">
+                          <span className="font-semibold block truncate max-w-[200px]">
+                            {thumbnailUrl.split('/').pop()}
+                          </span>
+                          <span className="text-[10px] text-slate-300 font-mono">
+                            Media Asset #{thumbnailId}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={openMediaModal}
+                            className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium backdrop-blur-xs transition-colors"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCover}
+                            className="p-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition-colors"
+                            title="Remove cover artwork"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center max-w-md bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#C9A24B] flex items-center justify-center mx-auto mb-3">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-slate-800 mb-1">
+                    No Cover Artwork Selected
+                  </h4>
+                  <p className="text-xs text-slate-400 mb-4">
+                    Select an existing asset from your media library or upload a new high-resolution cover.
+                  </p>
+                  <div className="flex items-center justify-center gap-2.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={openMediaModal}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0F1B2D] hover:bg-[#1a2d47] text-white text-xs font-semibold transition-all shadow-xs"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5 text-[#C9A24B]" />
+                      <span>Choose from Library</span>
+                    </button>
+                    <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-xs">
+                      <UploadCloud className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{isUploadingMedia ? 'Uploading...' : 'Upload Image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUploadCover}
+                        disabled={isUploadingMedia}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
                 YouTube Watch / Embed URL
@@ -805,6 +963,138 @@ export function EpisodeEditor({ initialData, isNew = false }: EpisodeEditorProps
           </div>
         )}
       </div>
+
+      {/* Media Library Selector Modal */}
+      {isMediaModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-serif font-bold text-slate-900 text-base">
+                  Select Episode Cover Artwork
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Pick an existing image or upload a new one directly into the Media Library.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMediaModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Controls Bar */}
+            <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={mediaSearch}
+                  onChange={(e) => setMediaSearch(e.target.value)}
+                  placeholder="Filter media by filename..."
+                  className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C9A24B]"
+                />
+              </div>
+
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0">
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>{isUploadingMedia ? 'Uploading...' : 'Upload New Cover'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleUploadCover}
+                  disabled={isUploadingMedia}
+                />
+              </label>
+            </div>
+
+            {/* Modal Media Grid */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {isLoadingMedia ? (
+                <div className="py-16 text-center text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#C9A24B]" />
+                  <p className="text-xs font-medium">Loading media assets...</p>
+                </div>
+              ) : mediaLibrary.length === 0 ? (
+                <div className="py-16 text-center text-slate-400">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p className="text-xs font-medium text-slate-700">No media assets found</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Upload an image to add it to your library.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {mediaLibrary
+                    .filter((m) =>
+                      mediaSearch ? m.filename.toLowerCase().includes(mediaSearch.toLowerCase()) : true
+                    )
+                    .map((m) => {
+                      const isSelected = thumbnailId === m.id;
+                      const isImage = m.mime_type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(m.filename);
+                      const imgUrl = m.url || m.thumbnail_url || `/media/${m.filename}`;
+
+                      return (
+                        <button
+                          type="button"
+                          key={m.id}
+                          onClick={() => handleSelectMedia(m)}
+                          className={`group relative text-left rounded-xl border overflow-hidden p-2 flex flex-col justify-between transition-all ${
+                            isSelected
+                              ? 'bg-amber-50/50 border-[#C9A24B] ring-2 ring-[#C9A24B]/30'
+                              : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                          }`}
+                        >
+                          <div className="aspect-video bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center relative mb-2">
+                            {isImage ? (
+                              <img
+                                src={imgUrl}
+                                alt={m.alt || m.filename}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                            ) : (
+                              <ImageIcon className="w-8 h-8 text-slate-400" />
+                            )}
+                            {isSelected && (
+                              <div className="absolute top-1.5 right-1.5 bg-[#C9A24B] text-[#0F1B2D] p-0.5 rounded-full shadow-xs">
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-800 truncate" title={m.filename}>
+                              {m.filename}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              ID #{m.id} {m.width && m.height ? `· ${m.width}x${m.height}` : ''}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                {thumbnailId ? `Selected: Asset #${thumbnailId}` : 'No asset selected'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsMediaModalOpen(false)}
+                className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

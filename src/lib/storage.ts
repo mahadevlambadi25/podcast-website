@@ -4,17 +4,42 @@ import path from 'path';
 /**
  * Returns the primary storage directory for uploaded media.
  * Supports:
- * 1. Explicit MEDIA_STORAGE_DIR environment variable
- * 2. Render persistent disk mounted at /app/media
- * 3. Local project directory: process.cwd()/media
- * 4. Fallback: process.cwd()/public/media
+ * 1. Explicit MEDIA_STORAGE_DIR environment variable (auto-creates if missing)
+ * 2. Render native persistent disk mounted at /var/data/media
+ * 3. Render docker persistent disk mounted at /app/media
+ * 4. Local project directory: process.cwd()/media
+ * 5. Fallback: process.cwd()/public/media
  */
 export function getPrimaryMediaDir(): string {
-  if (process.env.MEDIA_STORAGE_DIR && fs.existsSync(process.env.MEDIA_STORAGE_DIR)) {
-    return process.env.MEDIA_STORAGE_DIR;
+  if (process.env.MEDIA_STORAGE_DIR) {
+    const dir = path.resolve(process.env.MEDIA_STORAGE_DIR);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {
+        // Fallback below
+      }
+    }
+    if (fs.existsSync(dir)) {
+      return dir;
+    }
   }
 
-  // Render persistent disk
+  // Render native runtime persistent disk (/var/data)
+  if (fs.existsSync('/var/data/media')) {
+    return '/var/data/media';
+  }
+  if (fs.existsSync('/var/data')) {
+    const varMedia = '/var/data/media';
+    try {
+      fs.mkdirSync(varMedia, { recursive: true });
+      return varMedia;
+    } catch {
+      // Continue to next fallback
+    }
+  }
+
+  // Docker or legacy Render persistent disk
   if (fs.existsSync('/app/media')) {
     return '/app/media';
   }
@@ -39,9 +64,11 @@ export function getMediaSearchDirs(): string[] {
   const dirs: string[] = [];
 
   if (process.env.MEDIA_STORAGE_DIR) {
-    dirs.push(process.env.MEDIA_STORAGE_DIR);
+    dirs.push(path.resolve(process.env.MEDIA_STORAGE_DIR));
   }
 
+  dirs.push('/var/data/media');
+  dirs.push('/var/data');
   dirs.push('/app/media');
   dirs.push(path.resolve(process.cwd(), 'media'));
   dirs.push(path.resolve(process.cwd(), 'public', 'media'));

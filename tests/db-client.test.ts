@@ -1,7 +1,25 @@
-import { describe, it, expect } from 'vitest';
-import { convertPlaceholders, adaptSqlDialect, formatDbError, sanitizeDatabaseUrl } from '../src/lib/db/client';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  convertPlaceholders,
+  adaptSqlDialect,
+  formatDbError,
+  sanitizeDatabaseUrl,
+  getSslConfig,
+  getDatabaseUrl,
+} from '../src/lib/db/client';
+import { parse } from 'pg-connection-string';
 
 describe('PostgreSQL Database Client Utilities', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   describe('convertPlaceholders', () => {
     it('converts single and multiple question mark placeholders to $1, $2, ...', () => {
       const sql = 'SELECT * FROM episodes WHERE id = ? AND status = ?';
@@ -90,6 +108,46 @@ describe('PostgreSQL Database Client Utilities', () => {
     it('returns empty or non-postgres strings without breaking', () => {
       expect(sanitizeDatabaseUrl('')).toBe('');
       expect(sanitizeDatabaseUrl('file:./payload.db')).toBe('file:./payload.db');
+    });
+  });
+
+  describe('SSL Configuration & uselibpqcompat Normalization', () => {
+    it('returns false for localhost connections without sslmode', () => {
+      const ssl = getSslConfig('postgresql://postgres:pass@localhost:5432/db');
+      expect(ssl).toBe(false);
+    });
+
+    it('enables SSL with rejectUnauthorized: false for Supabase pooler connections', () => {
+      const ssl = getSslConfig('postgresql://postgres.ref:pass@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require');
+      expect(ssl).toEqual({ rejectUnauthorized: false });
+    });
+
+    it('normalizes DATABASE_URL to include uselibpqcompat=true when sslmode=require is present', () => {
+      process.env.DATABASE_URL =
+        'postgresql://postgres.ref:pass@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require';
+      const url = getDatabaseUrl();
+      expect(url).toContain('sslmode=require');
+      expect(url).toContain('uselibpqcompat=true');
+    });
+
+    it('does not duplicate uselibpqcompat=true if already present', () => {
+      process.env.DATABASE_URL =
+        'postgresql://postgres.ref:pass@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true';
+      const url = getDatabaseUrl();
+      const occurrences = (url?.match(/uselibpqcompat=true/g) || []).length;
+      expect(occurrences).toBe(1);
+    });
+
+    it('does not trigger pg-connection-string warning when parsing normalized URL', () => {
+      process.env.DATABASE_URL =
+        'postgresql://postgres.ref:pass@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require';
+      const url = getDatabaseUrl();
+      expect(url).not.toBeNull();
+
+      const warningSpy = vi.spyOn(process, 'emitWarning');
+      parse(url!);
+      expect(warningSpy).not.toHaveBeenCalled();
+      warningSpy.mockRestore();
     });
   });
 });

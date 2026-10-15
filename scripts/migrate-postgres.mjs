@@ -254,6 +254,10 @@ export async function runPostgresMigrations() {
   }
 
   connectionString = sanitizeDatabaseUrl(connectionString);
+  if (connectionString.includes('sslmode=') && !connectionString.includes('uselibpqcompat=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    connectionString = `${connectionString}${separator}uselibpqcompat=true`;
+  }
 
   const isLocalhost =
     connectionString.includes('localhost') || connectionString.includes('127.0.0.1');

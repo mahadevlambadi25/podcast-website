@@ -47,6 +47,17 @@ export function sanitizeDatabaseUrl(urlStr: string): string {
   return `${proto}${user}:${encodedPassword}@${host}${port ? `:${port}` : ''}${rest || ''}`;
 }
 
+export function normalizePostgresUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  let url = sanitizeDatabaseUrl(rawUrl);
+  // If sslmode= is present and uselibpqcompat is missing, add uselibpqcompat=true to eliminate pg-connection-string warning
+  if (url.includes('sslmode=') && !url.includes('uselibpqcompat=')) {
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}uselibpqcompat=true`;
+  }
+  return url;
+}
+
 export function getDatabaseUrl(): string | null {
   const url = process.env.DATABASE_URL || process.env.DATABASE_URI;
   if (!url) return null;
@@ -57,7 +68,7 @@ export function getDatabaseUrl(): string | null {
       '⚠️ DATABASE_URL contains unreplaced placeholder tokens. Update .env.local with your real Supabase connection string.'
     );
   }
-  return sanitizeDatabaseUrl(url);
+  return normalizePostgresUrl(url);
 }
 
 export function getSslConfig(

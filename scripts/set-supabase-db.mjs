@@ -34,10 +34,14 @@ if (!inputUrl) {
   process.exit(1);
 }
 
-// Ensure sslmode=require is set for remote connections
+// Ensure sslmode=require and uselibpqcompat=true are set for remote connections
 let finalUrl = sanitizeDatabaseUrl(inputUrl);
-if (!finalUrl.includes('localhost') && !finalUrl.includes('127.0.0.1') && !finalUrl.includes('sslmode=')) {
-  finalUrl += finalUrl.includes('?') ? '&sslmode=require' : '?sslmode=require';
+if (!finalUrl.includes('localhost') && !finalUrl.includes('127.0.0.1')) {
+  if (!finalUrl.includes('sslmode=')) {
+    finalUrl += finalUrl.includes('?') ? '&sslmode=require&uselibpqcompat=true' : '?sslmode=require&uselibpqcompat=true';
+  } else if (!finalUrl.includes('uselibpqcompat=')) {
+    finalUrl += finalUrl.includes('?') ? '&uselibpqcompat=true' : '?uselibpqcompat=true';
+  }
 }
 
 if (!fs.existsSync(envLocalPath)) {

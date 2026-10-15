@@ -216,4 +216,31 @@ describe('Episode Service Publishing & Scheduling Dates', () => {
 
     executeSpy.mockRestore();
   });
+
+  it('correctly passes thumbnail_id when creating and updating an episode', async () => {
+    let capturedArgs: any[] = [];
+
+    const executeSpy = vi.spyOn(db, 'execute').mockImplementation(async (options) => {
+      capturedArgs = typeof options === 'string' ? [] : (options.args || []);
+      return { rows: [], lastInsertRowid: 15, rowCount: 1 };
+    });
+
+    await createEpisode({
+      title: 'Episode with Cover',
+      slug: 'episode-with-cover',
+      thumbnail_id: 42,
+    });
+
+    // In createEpisode, thumbnail_id is arg 7
+    expect(capturedArgs[7]).toBe(42);
+
+    await updateEpisode(15, {
+      thumbnail_id: 99,
+    });
+
+    // In updateEpisode, thumbnail_id is arg 7
+    expect(capturedArgs[7]).toBe(99);
+
+    executeSpy.mockRestore();
+  });
 });

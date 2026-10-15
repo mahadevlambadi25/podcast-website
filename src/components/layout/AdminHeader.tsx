@@ -81,7 +81,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = (props) => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 bg-[#0F1B2D] border-b border-white/[0.08] px-4 lg:px-6 flex items-center justify-between text-white shadow-sm backdrop-blur-md">
+      <header className="sticky -top-px z-30 h-16 bg-[#0F1B2D] border-b border-white/[0.08] px-4 lg:px-6 flex items-center justify-between text-white shadow-sm backdrop-blur-md before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-[#0F1B2D] before:pointer-events-none">
         {/* Left: Mobile Drawer Trigger + Breadcrumbs */}
         <div className="flex items-center gap-2.5 min-w-0">
           <button

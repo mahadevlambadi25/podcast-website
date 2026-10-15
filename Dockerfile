@@ -29,7 +29,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Create media and data directories for persistent storage
-RUN mkdir -p /app/media /app/data && chown -R nextjs:nodejs /app
+RUN mkdir -p /var/data/media /app/media /app/data && chown -R nextjs:nodejs /var/data /app
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
