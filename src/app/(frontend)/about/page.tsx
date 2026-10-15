@@ -31,7 +31,7 @@ export default async function AboutPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-16">
       {/* Header */}
-      <div className="space-y-6 max-w-3xl">
+      <div data-reveal className="space-y-6 max-w-3xl">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C6A15B]/15 border border-[#C6A15B]/30 text-[#C6A15B] text-xs font-bold tracking-wider uppercase shadow-sm">
           <BookOpen className="w-3.5 h-3.5" />
           The Story Behind The Show
@@ -63,7 +63,7 @@ export default async function AboutPage() {
       {/* Editorial Mission Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
         {/* Mission */}
-        <div className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
+        <div data-reveal data-reveal-delay="1" className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-[#F7F3EB] border border-[#DFE3E8] text-[#C6A15B] flex items-center justify-center shadow-sm">
             <Target className="w-5 h-5" />
           </div>
@@ -80,7 +80,7 @@ export default async function AboutPage() {
         </div>
 
         {/* Who This Is For */}
-        <div className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
+        <div data-reveal data-reveal-delay="2" className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-[#F7F3EB] border border-[#DFE3E8] text-[#C6A15B] flex items-center justify-center shadow-sm">
             <Award className="w-5 h-5" />
           </div>
@@ -97,7 +97,7 @@ export default async function AboutPage() {
         </div>
 
         {/* Editorial Integrity */}
-        <div className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
+        <div data-reveal data-reveal-delay="3" className="p-8 rounded-3xl bg-white border border-[#DFE3E8] space-y-4 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-[#F7F3EB] border border-[#DFE3E8] text-[#C6A15B] flex items-center justify-center shadow-sm">
             <Mic className="w-5 h-5" />
           </div>
@@ -116,7 +116,7 @@ export default async function AboutPage() {
 
       {/* Host Section - Rendered ONLY if configured in CMS */}
       {hasHost && (
-        <section className="p-8 sm:p-12 rounded-3xl neu-card bg-neu-card border border-white/80 shadow-neu-raised-lg grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        <section data-reveal className="p-8 sm:p-12 rounded-3xl neu-card bg-neu-card border border-white/80 shadow-neu-raised-lg grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           {hostPortraitUrl && (
             <div className="md:col-span-4 relative aspect-[4/5] rounded-2xl overflow-hidden bg-neu-sunken neu-inset shadow-inner">
               <Image
@@ -148,7 +148,7 @@ export default async function AboutPage() {
       )}
 
       {/* About AI Automation Labs */}
-      <section className="p-8 sm:p-10 rounded-3xl neu-card bg-neu-card border border-white/80 shadow-neu-raised space-y-4">
+      <section data-reveal className="p-8 sm:p-10 rounded-3xl neu-card bg-neu-card border border-white/80 shadow-neu-raised space-y-4">
         <h2 className="text-2xl font-editorial font-bold text-neu-charcoal">
           Presented by {publisherName}
         </h2>

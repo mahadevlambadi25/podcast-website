@@ -17,9 +17,16 @@ interface EpisodeCardProps {
     topics?: any[];
   };
   featuredLarge?: boolean;
+  staggerIndex?: number;
+  className?: string;
 }
 
-export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps) {
+export function EpisodeCard({
+  episode,
+  featuredLarge = false,
+  staggerIndex,
+  className = '',
+}: EpisodeCardProps) {
   const publishedDate = episode.publishedAt
     ? new Date(episode.publishedAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -40,7 +47,10 @@ export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps
 
   if (featuredLarge) {
     return (
-      <div className="rounded-3xl overflow-hidden group grid grid-cols-1 lg:grid-cols-12 shadow-xl border border-[#DFE3E8] bg-white transition-all duration-300">
+      <div
+        data-reveal
+        className={`rounded-3xl overflow-hidden group grid grid-cols-1 lg:grid-cols-12 shadow-xl border border-[#DFE3E8] bg-white transition-all duration-300 ${className}`}
+      >
         {/* Large Thumbnail */}
         <div className="relative aspect-video lg:aspect-auto lg:col-span-7 overflow-hidden bg-[#EDE8DE] p-3 sm:p-4">
           <Link
@@ -125,7 +135,11 @@ export function EpisodeCard({ episode, featuredLarge = false }: EpisodeCardProps
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden flex flex-col h-full group bg-white border border-[#DFE3E8] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+    <div
+      data-reveal
+      {...(staggerIndex ? { 'data-reveal-delay': Math.min(Math.max(staggerIndex, 1), 8) } : {})}
+      className={`rounded-2xl overflow-hidden flex flex-col h-full group bg-white border border-[#DFE3E8] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${className}`}
+    >
       {/* 16:9 Thumbnail with Bezel */}
       <div className="p-3 pb-0">
         <Link href={`/episodes/${episode.slug}`} className="relative aspect-video w-full rounded-xl overflow-hidden bg-[#EDE8DE] block shadow-inner">

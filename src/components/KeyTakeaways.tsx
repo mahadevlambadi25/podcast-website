@@ -16,6 +16,7 @@ export function KeyTakeaways({
 
   return (
     <section
+      data-reveal
       aria-label={title}
       className={`rounded-2xl p-6 sm:p-8 bg-white border border-[#DFE3E8] shadow-md space-y-4 ${className}`}
     >

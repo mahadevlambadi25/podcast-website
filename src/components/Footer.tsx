@@ -21,7 +21,7 @@ export function Footer({ socialsOverride }: FooterProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand Column */}
-          <div className="md:col-span-2 space-y-4">
+          <div data-reveal data-reveal-delay="1" className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF67] to-[#B89248] flex items-center justify-center font-serif text-white font-extrabold text-xl shadow-md border border-white/20">
                 U
@@ -53,7 +53,7 @@ export function Footer({ socialsOverride }: FooterProps) {
           </div>
 
           {/* Navigation Links */}
-          <div>
+          <div data-reveal data-reveal-delay="2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#C6A15B] mb-4">
               Explore
             </h4>
@@ -82,7 +82,7 @@ export function Footer({ socialsOverride }: FooterProps) {
           </div>
 
           {/* Socials & Legal */}
-          <div>
+          <div data-reveal data-reveal-delay="3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#C6A15B] mb-4">
               Connect &amp; Legal
             </h4>
@@ -136,7 +136,7 @@ export function Footer({ socialsOverride }: FooterProps) {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-[#8E9CAE] gap-4">
+        <div data-reveal className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-[#8E9CAE] gap-4">
           <p>© {currentYear} {siteConfig.brandName}. All rights reserved.</p>
           <p>Editorial interviews produced and published independently.</p>
         </div>

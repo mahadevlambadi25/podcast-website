@@ -79,7 +79,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             {/* Left Column: Eyebrow, Main Headline, Description, CTAs */}
-            <div className="lg:col-span-7 space-y-6 text-left">
+            <div data-reveal className="lg:col-span-7 space-y-6 text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C6A15B]/15 border border-[#C6A15B]/30 text-[#C6A15B] text-xs font-bold tracking-widest uppercase shadow-sm">
                 <Sparkles className="w-3.5 h-3.5" />
                 Long-Form Leadership Dialogues
@@ -115,7 +115,7 @@ export default async function HomePage() {
             </div>
 
             {/* Right Column: Premium Studio Microphone Visual */}
-            <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <div data-reveal data-reveal-delay="2" className="lg:col-span-5 flex justify-center lg:justify-end">
               <HeroMicrophoneVisual />
             </div>
           </div>
@@ -125,7 +125,7 @@ export default async function HomePage() {
       {/* C. Latest Conversation */}
       {latestEpisode && (
         <section className="py-14 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8 sm:mb-10">
+          <div data-reveal className="flex items-end justify-between mb-8 sm:mb-10">
             <div>
               <div className="text-xs uppercase tracking-widest font-bold text-[#C6A15B] mb-1">
                 Headline Interview
@@ -148,7 +148,7 @@ export default async function HomePage() {
 
       {/* D. Browse by Industry */}
       {topics.length > 0 && (
-        <section className="py-7 bg-white/60 border-y border-[#DFE3E8] backdrop-blur-sm">
+        <section data-reveal className="py-7 bg-white/60 border-y border-[#DFE3E8] backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-widest font-bold text-[#596579]">
@@ -163,7 +163,7 @@ export default async function HomePage() {
       {/* E. Featured Leaders */}
       {featuredGuests.length > 0 && (
         <section className="py-14 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-8 sm:mb-10">
+          <div data-reveal className="flex items-end justify-between mb-8 sm:mb-10">
             <div>
               <div className="text-xs uppercase tracking-widest font-bold text-[#C6A15B] mb-1">
                 The Architects of Industry
@@ -181,8 +181,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredGuests.map((guest: any) => (
-              <GuestCard key={guest.id} guest={guest} />
+            {featuredGuests.map((guest: any, idx: number) => (
+              <GuestCard key={guest.id} guest={guest} staggerIndex={idx + 1} />
             ))}
           </div>
         </section>
@@ -191,7 +191,7 @@ export default async function HomePage() {
       {/* F. More Conversations */}
       {recentEpisodes.length > 0 && (
         <section className="py-14 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#DFE3E8]">
-          <div className="flex items-end justify-between mb-8 sm:mb-10">
+          <div data-reveal className="flex items-end justify-between mb-8 sm:mb-10">
             <div>
               <div className="text-xs uppercase tracking-widest font-bold text-[#C6A15B] mb-1">
                 Recent Broadcasts
@@ -209,8 +209,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {recentEpisodes.map((ep: any) => (
-              <EpisodeCard key={ep.id} episode={ep} />
+            {recentEpisodes.map((ep: any, idx: number) => (
+              <EpisodeCard key={ep.id} episode={ep} staggerIndex={(idx % 3) + 1} />
             ))}
           </div>
         </section>

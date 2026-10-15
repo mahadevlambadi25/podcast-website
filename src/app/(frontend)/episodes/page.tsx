@@ -51,7 +51,7 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
       {/* Header & Mission */}
-      <div className="space-y-4 max-w-3xl">
+      <div data-reveal className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full neu-pill text-gold-600 text-xs font-bold tracking-wider uppercase shadow-sm">
           <Compass className="w-3.5 h-3.5" />
           The Archive
@@ -65,7 +65,7 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="space-y-6 pt-6 border-t border-neu-border">
+      <div data-reveal className="space-y-6 pt-6 border-t border-neu-border">
         <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
           <div className="w-full lg:max-w-md">
             <SearchBar placeholder="Search episodes by title, guest, or tag..." />
@@ -125,7 +125,7 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
 
       {/* Episode Grid or Empty State */}
       {episodesData.docs.length === 0 ? (
-        <div className="neu-card rounded-3xl border border-white/80 p-12 text-center max-w-xl mx-auto space-y-4 my-12 bg-neu-card shadow-neu-raised">
+        <div data-reveal className="neu-card rounded-3xl border border-white/80 p-12 text-center max-w-xl mx-auto space-y-4 my-12 bg-neu-card shadow-neu-raised">
           <Filter className="w-10 h-10 text-gold-600 mx-auto" />
           <h3 className="text-xl font-editorial font-bold text-neu-charcoal">No episodes found</h3>
           <p className="text-sm text-neu-muted">
@@ -142,15 +142,15 @@ export default async function EpisodesPage({ searchParams }: EpisodesPageProps) 
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {episodesData.docs.map((episode: any) => (
-            <EpisodeCard key={episode.id} episode={episode} />
+          {episodesData.docs.map((episode: any, idx: number) => (
+            <EpisodeCard key={episode.id} episode={episode} staggerIndex={(idx % 3) + 1} />
           ))}
         </div>
       )}
 
       {/* Pagination Controls */}
       {episodesData.totalPages > 1 && (
-        <nav aria-label="Episodes Pagination" className="pt-8 border-t border-neu-border flex items-center justify-between">
+        <nav data-reveal aria-label="Episodes Pagination" className="pt-8 border-t border-neu-border flex items-center justify-between">
           <div>
             {episodesData.hasPrevPage ? (
               <Link

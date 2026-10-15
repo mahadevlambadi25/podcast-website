@@ -147,7 +147,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       {/* Guest Hero Section */}
       <header className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* Portrait 4:5 with Refined Bezel */}
-        <div className="lg:col-span-5 p-3 rounded-3xl bg-white border border-[#DFE3E8] shadow-xl">
+        <div data-reveal data-reveal-delay="1" className="lg:col-span-5 p-3 rounded-3xl bg-white border border-[#DFE3E8] shadow-xl">
           <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-[#EDE8DE] shadow-inner">
             <Image
               src={portraitUrl}
@@ -167,7 +167,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
         </div>
 
         {/* Profile Meta & Overview */}
-        <div className="lg:col-span-7 space-y-6">
+        <div data-reveal data-reveal-delay="2" className="lg:col-span-7 space-y-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C6A15B]/15 border border-[#C6A15B]/30 text-[#C6A15B] text-xs font-bold tracking-wider uppercase shadow-sm">
               <Sparkles className="w-3.5 h-3.5" />
@@ -256,16 +256,18 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       {/* Key Insights & Quotes */}
       {guest.keyInsights && guest.keyInsights.length > 0 && (
         <section className="space-y-6 pt-10 border-t border-[#DFE3E8]">
-          <div className="text-xs uppercase tracking-widest font-bold text-[#C6A15B]">
+          <div data-reveal className="text-xs uppercase tracking-widest font-bold text-[#C6A15B]">
             Contrarian Philosophy &amp; Strategy
           </div>
-          <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-[#172235]">
+          <h2 data-reveal className="text-2xl sm:text-3xl font-editorial font-bold text-[#172235]">
             Key Insights from {guest.fullName}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {guest.keyInsights.map((insight: any, idx: number) => (
               <div
                 key={idx}
+                data-reveal
+                data-reveal-delay={String((idx % 2) + 1)}
                 className="p-6 sm:p-8 rounded-2xl bg-white border border-[#DFE3E8] shadow-md relative space-y-3"
               >
                 <Quote className="w-6 h-6 text-[#C6A15B]/30" />
@@ -284,7 +286,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       )}
 
       {/* Editorial Biography */}
-      <section className="space-y-6 pt-10 border-t border-[#DFE3E8]">
+      <section data-reveal className="space-y-6 pt-10 border-t border-[#DFE3E8]">
         <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-[#172235]">
           Full Leadership Biography
         </h2>
@@ -296,11 +298,11 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       {/* Featured Conversation Episode */}
       {featuredEpisode && (
         <section className="space-y-6 pt-10 border-t border-[#DFE3E8]">
-          <div className="text-xs uppercase tracking-widest font-bold text-[#C6A15B] flex items-center gap-1.5">
+          <div data-reveal className="text-xs uppercase tracking-widest font-bold text-[#C6A15B] flex items-center gap-1.5">
             <Video className="w-3.5 h-3.5" />
             Headline Dialogue
           </div>
-          <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-[#172235]">
+          <h2 data-reveal className="text-2xl sm:text-3xl font-editorial font-bold text-[#172235]">
             Watch {guest.fullName}&apos;s Interview
           </h2>
           <EpisodeCard episode={featuredEpisode as any} featuredLarge />
@@ -310,12 +312,12 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       {/* Additional Episodes featuring this guest */}
       {moreEpisodes.length > 0 && (
         <section className="space-y-6 pt-10 border-t border-[#DFE3E8]">
-          <h2 className="text-2xl font-editorial font-bold text-neu-charcoal">
+          <h2 data-reveal className="text-2xl font-editorial font-bold text-neu-charcoal">
             More Episodes Featuring {guest.fullName}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {moreEpisodes.map((ep: any) => (
-              <EpisodeCard key={ep.id} episode={ep} />
+            {moreEpisodes.map((ep: any, idx: number) => (
+              <EpisodeCard key={ep.id} episode={ep} staggerIndex={(idx % 2) + 1} />
             ))}
           </div>
         </section>
@@ -324,15 +326,15 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
       {/* Related Leaders */}
       {relatedGuests.length > 0 && (
         <section className="space-y-6 pt-12 border-t border-neu-border">
-          <div className="text-xs uppercase tracking-widest font-bold text-gold-600">
+          <div data-reveal className="text-xs uppercase tracking-widest font-bold text-gold-600">
             More Profiles
           </div>
-          <h2 className="text-2xl sm:text-3xl font-editorial font-bold text-neu-charcoal">
+          <h2 data-reveal className="text-2xl sm:text-3xl font-editorial font-bold text-neu-charcoal">
             Other Featured Leaders
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedGuests.map((g: any) => (
-              <GuestCard key={g.id} guest={g} />
+            {relatedGuests.map((g: any, idx: number) => (
+              <GuestCard key={g.id} guest={g} staggerIndex={(idx % 3) + 1} />
             ))}
           </div>
         </section>

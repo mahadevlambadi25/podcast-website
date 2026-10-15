@@ -41,7 +41,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-12">
       {/* Header */}
-      <div className="space-y-4 max-w-3xl">
+      <div data-reveal className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full neu-pill text-gold-600 text-xs font-bold tracking-wider uppercase shadow-sm">
           <Users className="w-3.5 h-3.5" />
           The Leaders
@@ -55,7 +55,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
       </div>
 
       {/* Search & Filters */}
-      <div className="space-y-6 pt-6 border-t border-neu-border">
+      <div data-reveal className="space-y-6 pt-6 border-t border-neu-border">
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
           <div className="w-full sm:max-w-md">
             <SearchBar placeholder="Search by guest name, company or topic..." />
@@ -81,7 +81,7 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
 
       {/* Guest Cards Grid or Empty State */}
       {guestsData.docs.length === 0 ? (
-        <div className="neu-card rounded-3xl border border-white/80 p-12 text-center max-w-xl mx-auto space-y-4 my-12 bg-neu-card shadow-neu-raised">
+        <div data-reveal className="neu-card rounded-3xl border border-white/80 p-12 text-center max-w-xl mx-auto space-y-4 my-12 bg-neu-card shadow-neu-raised">
           <Filter className="w-10 h-10 text-gold-600 mx-auto" />
           <h3 className="text-xl font-editorial font-bold text-neu-charcoal">No leaders found</h3>
           <p className="text-sm text-neu-muted">
@@ -98,15 +98,15 @@ export default async function GuestsPage({ searchParams }: GuestsPageProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {guestsData.docs.map((guest: any) => (
-            <GuestCard key={guest.id} guest={guest} />
+          {guestsData.docs.map((guest: any, idx: number) => (
+            <GuestCard key={guest.id} guest={guest} staggerIndex={(idx % 4) + 1} />
           ))}
         </div>
       )}
 
       {/* Pagination */}
       {guestsData.totalPages > 1 && (
-        <nav aria-label="Guests Pagination" className="pt-8 border-t border-neu-border flex items-center justify-between">
+        <nav data-reveal aria-label="Guests Pagination" className="pt-8 border-t border-neu-border flex items-center justify-between">
           <div>
             {guestsData.hasPrevPage ? (
               <Link

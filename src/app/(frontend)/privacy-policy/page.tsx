@@ -18,7 +18,7 @@ export default async function PrivacyPolicyPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-10">
-      <div className="space-y-4">
+      <div data-reveal className="space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full neu-raised-sm border border-neu-border/60 text-neu-gold text-xs font-semibold tracking-wider uppercase">
           <Shield className="w-3.5 h-3.5" />
           Transparency &amp; Governance
@@ -31,7 +31,7 @@ export default async function PrivacyPolicyPage() {
         </p>
       </div>
 
-      <div className="p-8 sm:p-12 rounded-3xl neu-card border border-neu-border/80 text-neu-body leading-relaxed space-y-8">
+      <div data-reveal className="p-8 sm:p-12 rounded-3xl neu-card border border-neu-border/80 text-neu-body leading-relaxed space-y-8">
         {customContent ? (
           <RichText content={customContent} />
         ) : (

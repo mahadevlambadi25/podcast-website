@@ -5,7 +5,10 @@ import { siteConfig } from '@/config/site';
 
 export function NominationCTA() {
   return (
-    <section className="relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16 my-8 sm:my-10 bg-gradient-to-br from-[#101C2C] via-[#19283B] to-[#101C2C] text-white border border-white/10 shadow-2xl">
+    <section
+      data-reveal
+      className="relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16 my-8 sm:my-10 bg-gradient-to-br from-[#101C2C] via-[#19283B] to-[#101C2C] text-white border border-white/10 shadow-2xl"
+    >
       {/* Ambient Radial Accent */}
       <div className="absolute -top-20 -right-20 w-80 h-80 bg-[#C6A15B]/15 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-[#1D4ED8]/10 blur-[100px] rounded-full pointer-events-none" />

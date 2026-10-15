@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function NominatePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 space-y-12">
-      <div className="text-center space-y-4 max-w-2xl mx-auto">
+      <div data-reveal className="text-center space-y-4 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C6A15B]/15 border border-[#C6A15B]/30 text-[#C6A15B] text-xs font-bold tracking-wider uppercase shadow-sm">
           <Sparkles className="w-3.5 h-3.5" />
           Editorial Nominations
@@ -27,7 +27,7 @@ export default function NominatePage() {
 
       {/* Editorial Criteria Pills */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#172235]">
-        <div className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
+        <div data-reveal data-reveal-delay="1" className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
           <div className="font-bold text-[#172235] flex items-center gap-2 text-sm">
             <CheckCircle className="w-4 h-4 text-[#C6A15B]" />
             Demonstrated Impact
@@ -37,7 +37,7 @@ export default function NominatePage() {
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
+        <div data-reveal data-reveal-delay="2" className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
           <div className="font-bold text-[#172235] flex items-center gap-2 text-sm">
             <CheckCircle className="w-4 h-4 text-[#C6A15B]" />
             Contrarian Insight
@@ -47,7 +47,7 @@ export default function NominatePage() {
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
+        <div data-reveal data-reveal-delay="3" className="p-6 rounded-2xl bg-white border border-[#DFE3E8] shadow-sm space-y-2">
           <div className="font-bold text-[#172235] flex items-center gap-2 text-sm">
             <Shield className="w-4 h-4 text-[#C6A15B]" />
             Confidential Review
@@ -59,7 +59,9 @@ export default function NominatePage() {
       </div>
 
       {/* Nomination Form */}
-      <NominationForm />
+      <div data-reveal>
+        <NominationForm />
+      </div>
     </div>
   );
 }

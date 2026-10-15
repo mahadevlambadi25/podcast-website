@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CookieBanner } from '@/components/CookieBanner';
 import { Analytics } from '@/components/Analytics';
+import { ScrollRevealProvider } from '@/components/ScrollRevealProvider';
 import { getSiteSettings } from '@/lib/payload';
 
 const fraunces = Fraunces({
@@ -99,6 +100,7 @@ export default async function FrontendLayout({
 
         <Footer socialsOverride={socials} />
 
+        <ScrollRevealProvider />
         <CookieBanner />
         <Analytics measurementId={analyticsId} />
       </body>

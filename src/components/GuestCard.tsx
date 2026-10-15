@@ -15,9 +15,11 @@ interface GuestCardProps {
     portraitAlt?: string | null;
     industries?: any[];
   };
+  staggerIndex?: number;
+  className?: string;
 }
 
-export function GuestCard({ guest }: GuestCardProps) {
+export function GuestCard({ guest, staggerIndex, className = '' }: GuestCardProps) {
   const portraitUrl = guest.portrait?.url || '/placeholders/portrait-placeholder.svg';
   const altText = guest.portraitAlt || guest.portrait?.alt || guest.fullName;
 
@@ -26,7 +28,11 @@ export function GuestCard({ guest }: GuestCardProps) {
   );
 
   return (
-    <div className="rounded-2xl overflow-hidden flex flex-col group h-full bg-white border border-[#DFE3E8] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+    <div
+      data-reveal
+      {...(staggerIndex ? { 'data-reveal-delay': Math.min(Math.max(staggerIndex, 1), 8) } : {})}
+      className={`rounded-2xl overflow-hidden flex flex-col group h-full bg-white border border-[#DFE3E8] shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${className}`}
+    >
       {/* 4:5 Portrait Image with Bezel */}
       <div className="p-3 pb-0">
         <Link href={`/guests/${guest.slug}`} className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-[#EDE8DE] block shadow-inner">
