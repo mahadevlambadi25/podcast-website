@@ -33,16 +33,50 @@ export async function GET(
     // Prevent directory traversal attacks
     const safeName = path.basename(requestedName);
     const filePath = findMediaFile(safeName);
+    let fileBuffer: Buffer | null = null;
+    let contentType: string | null = null;
 
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
+      const ext = path.extname(safeName).toLowerCase();
+      contentType = MIME_MAP[ext] || 'application/octet-stream';
+      fileBuffer = fs.readFileSync(filePath);
+    } else {
+      // Check durable database storage fallback
+      try {
+        const { db } = await import('@/lib/db/client');
+        const ext = path.extname(safeName).toLowerCase();
+        const baseNameWithoutExt = path.basename(safeName, ext).replace(/-\d{10,}$/, '');
+
+        const dbRes = await db.execute({
+          sql: `
+            SELECT filename, mime_type, data_base64
+            FROM media
+            WHERE filename = ? OR filename LIKE ?
+            ORDER BY (filename = ?) DESC, created_at DESC
+            LIMIT 1
+          `,
+          args: [safeName, `%${baseNameWithoutExt}%`, safeName],
+        });
+
+        if (dbRes.rows.length > 0 && dbRes.rows[0]?.data_base64) {
+          const row = dbRes.rows[0];
+          fileBuffer = Buffer.from(row.data_base64, 'base64');
+          contentType = row.mime_type || MIME_MAP[ext] || 'application/octet-stream';
+
+          // Asynchronously write to local disk cache for instant subsequent reads
+          const { saveMediaFile } = await import('@/lib/storage');
+          saveMediaFile(fileBuffer, safeName).catch(() => {});
+        }
+      } catch (dbErr) {
+        console.warn('Media DB lookup error:', dbErr);
+      }
+    }
+
+    if (!fileBuffer || !contentType) {
       return NextResponse.json({ error: 'Media file not found' }, { status: 404 });
     }
 
-    const ext = path.extname(safeName).toLowerCase();
-    const contentType = MIME_MAP[ext] || 'application/octet-stream';
-    const fileBuffer = fs.readFileSync(filePath);
-
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       status: 200,
       headers: {
         'Content-Type': contentType,

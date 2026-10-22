@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Calendar, Play, Clock } from 'lucide-react';
+import { EpisodeThumbnail } from '@/components/EpisodeThumbnail';
 
 interface EpisodeCardProps {
   episode: {
@@ -57,15 +57,16 @@ export function EpisodeCard({
             href={`/episodes/${episode.slug}`}
             className="relative w-full h-full min-h-[260px] sm:min-h-[340px] rounded-2xl overflow-hidden shadow-inner block group/thumb"
           >
-            <Image
-              src={thumbnailUrl}
+            <EpisodeThumbnail
+              thumbnailUrl={episode.thumbnail?.url}
+              youtubeVideoId={episode.youtubeVideoId}
               alt={episode.thumbnail?.alt || episode.title}
               fill
               sizes="(max-width: 1024px) 100vw, 60vw"
               priority
               className="object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/80 via-[#101C2C]/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/80 via-[#101C2C]/20 to-transparent pointer-events-none" />
             
             {/* Play badge on thumbnail hover */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
@@ -143,14 +144,15 @@ export function EpisodeCard({
       {/* 16:9 Thumbnail with Bezel */}
       <div className="p-3 pb-0">
         <Link href={`/episodes/${episode.slug}`} className="relative aspect-video w-full rounded-xl overflow-hidden bg-[#EDE8DE] block shadow-inner">
-          <Image
-            src={thumbnailUrl}
+          <EpisodeThumbnail
+            thumbnailUrl={episode.thumbnail?.url}
+            youtubeVideoId={episode.youtubeVideoId}
             alt={episode.thumbnail?.alt || episode.title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/70 via-transparent to-transparent opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/70 via-transparent to-transparent opacity-80 pointer-events-none" />
           
           {/* Center Play Icon Button */}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

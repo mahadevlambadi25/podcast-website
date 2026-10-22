@@ -24,9 +24,37 @@ export function YouTubeFacade({
 
   const isSample = isSampleVideoId(videoId);
 
-  const thumbnailUrl =
+  const initialThumb =
     customThumbnailUrl ||
     (videoId && !isSample ? getYouTubeThumbnailUrl(videoId, 'maxres') : '/placeholders/episode-placeholder.svg');
+
+  const [currentThumb, setCurrentThumb] = useState<string>(initialThumb);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  React.useEffect(() => {
+    const next =
+      customThumbnailUrl ||
+      (videoId && !isSample ? getYouTubeThumbnailUrl(videoId, 'maxres') : '/placeholders/episode-placeholder.svg');
+    setCurrentThumb(next);
+    setIsLoaded(false);
+  }, [customThumbnailUrl, videoId, isSample]);
+
+  const handleImageError = () => {
+    if (videoId && !isSample) {
+      const maxres = getYouTubeThumbnailUrl(videoId, 'maxres');
+      const hq = getYouTubeThumbnailUrl(videoId, 'hq');
+
+      if (currentThumb !== maxres && currentThumb !== hq) {
+        setCurrentThumb(maxres);
+        return;
+      }
+      if (currentThumb === maxres) {
+        setCurrentThumb(hq);
+        return;
+      }
+    }
+    setCurrentThumb('/placeholders/episode-placeholder.svg');
+  };
 
   const handlePlayClick = () => {
     if (!videoId || isSample) {
@@ -58,11 +86,12 @@ export function YouTubeFacade({
           aria-label={`Sample video placeholder: ${title}`}
         >
           <Image
-            src={thumbnailUrl}
+            src={currentThumb}
             alt={`Episode cover: ${title}`}
             fill
             sizes="(max-width: 1200px) 100vw, 1200px"
             priority
+            onError={handleImageError}
             className="object-cover opacity-20 filter blur-sm"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neu-base/90 via-neu-base/60 to-neu-base/80" />
@@ -137,18 +166,25 @@ export function YouTubeFacade({
             aria-label={`Play episode: ${title}`}
             className="w-full h-full relative cursor-pointer block text-left group focus:outline-none focus-visible:ring-4 focus-visible:ring-gold-500"
           >
+            {/* Loading skeleton */}
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-[#172235] animate-pulse" />
+            )}
+
             {/* Thumbnail Image */}
             <Image
-              src={thumbnailUrl}
+              src={currentThumb}
               alt={`Episode thumbnail: ${title}`}
               fill
               sizes="(max-width: 1200px) 100vw, 1200px"
               priority
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              onError={handleImageError}
+              onLoad={() => setIsLoaded(true)}
+              className={`object-cover transition-all duration-700 group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
 
             {/* Vignette Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-neu-charcoal/80 via-black/20 to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-neu-charcoal/80 via-black/20 to-black/30 pointer-events-none" />
 
             {/* Neumorphic Play Button Facade */}
             <div className="absolute inset-0 flex items-center justify-center">

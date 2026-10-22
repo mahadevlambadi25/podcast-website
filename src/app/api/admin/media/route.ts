@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
       filesize: file.size,
       alt: alt || baseName,
       caption: caption || undefined,
+      data_base64: buffer.toString('base64'),
     });
 
     await logActivity({

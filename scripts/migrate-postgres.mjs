@@ -224,6 +224,16 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: '20261022_009_media_storage_durability',
+    name: 'Add data_base64 column to media for durable cross-environment asset persistence',
+    up: async (client) => {
+      await client.query(`
+        ALTER TABLE media
+          ADD COLUMN IF NOT EXISTS data_base64 TEXT;
+      `);
+    },
+  },
 ];
 
 export async function runPostgresMigrations() {

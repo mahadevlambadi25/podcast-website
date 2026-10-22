@@ -55,7 +55,7 @@ export async function listMedia(options: {
   const listRes = await db.execute({
     sql: `
       SELECT 
-        m.*,
+        m.id, m.filename, m.url, m.thumbnail_url, m.mime_type, m.filesize, m.width, m.height, m.alt, m.caption, m.created_at, m.updated_at,
         (
           COALESCE((SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id), 0) +
           COALESCE((SELECT COUNT(*) FROM guests WHERE portrait_id = m.id), 0) +
@@ -98,6 +98,7 @@ export async function createMedia(data: {
   height?: number;
   alt?: string;
   caption?: string;
+  data_base64?: string;
 }): Promise<number> {
   const now = toUtcIsoString(new Date());
   const effectiveThumb = data.thumbnail_url || data.url;
@@ -105,8 +106,8 @@ export async function createMedia(data: {
   const res = await db.execute({
     sql: `
       INSERT INTO media (
-        filename, url, thumbnail_url, mime_type, filesize, width, height, alt, caption, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        filename, url, thumbnail_url, mime_type, filesize, width, height, alt, caption, data_base64, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.filename,
@@ -118,6 +119,7 @@ export async function createMedia(data: {
       data.height || null,
       data.alt || null,
       data.caption || null,
+      data.data_base64 || null,
       now,
       now,
     ],
@@ -130,7 +132,7 @@ export async function getMediaById(id: number): Promise<MediaItem | null> {
   const res = await db.execute({
     sql: `
       SELECT 
-        m.*,
+        m.id, m.filename, m.url, m.thumbnail_url, m.mime_type, m.filesize, m.width, m.height, m.alt, m.caption, m.created_at, m.updated_at,
         (
           COALESCE((SELECT COUNT(*) FROM episodes WHERE thumbnail_id = m.id), 0) +
           COALESCE((SELECT COUNT(*) FROM guests WHERE portrait_id = m.id), 0) +

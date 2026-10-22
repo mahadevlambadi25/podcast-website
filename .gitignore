@@ -18,7 +18,6 @@ payload.db*
 *.backup*
 backups/
 /media/
-/public/media/
 
 # Environment
 .env*.local

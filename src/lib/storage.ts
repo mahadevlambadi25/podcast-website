@@ -119,11 +119,35 @@ export function findMediaFile(filename: string): string | null {
   const cleanName = path.basename(filename);
   const dirs = getMediaSearchDirs();
 
+  // 1. Exact match
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     const candidate = path.join(dir, cleanName);
     if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
       return candidate;
+    }
+  }
+
+  // 2. Base name fallback (ignoring timestamp suffix if file was mirrored with different timestamp)
+  const ext = path.extname(cleanName);
+  const nameWithoutExt = path.basename(cleanName, ext);
+  const baseName = nameWithoutExt.replace(/-\d{10,}$/, '');
+
+  if (baseName && baseName !== nameWithoutExt) {
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) continue;
+      try {
+        const files = fs.readdirSync(dir);
+        // Find most relevant file sharing the same base name and extension
+        const match = files.find(
+          (f) => f.startsWith(baseName) && f.endsWith(ext) && fs.statSync(path.join(dir, f)).isFile()
+        );
+        if (match) {
+          return path.join(dir, match);
+        }
+      } catch {
+        // Continue searching other directories
+      }
     }
   }
 

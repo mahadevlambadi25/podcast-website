@@ -34,9 +34,12 @@ export async function generateMetadata({ params }: EpisodePageProps): Promise<Me
   const description = episode.seoDescription || episode.shortSummary;
   const canonicalUrl = episode.canonicalOverride || `${siteConfig.siteUrl}/episodes/${episode.slug}`;
 
-  const ogImageUrl =
-    (episode.thumbnail as any)?.url ||
-    `${siteConfig.siteUrl}/api/og?title=${encodeURIComponent(episode.title)}&type=EPISODE`;
+  const rawOg = (episode.thumbnail as any)?.url;
+  const ogImageUrl = rawOg
+    ? (rawOg.startsWith('http') ? rawOg : `${siteConfig.siteUrl}${rawOg}`)
+    : (episode.youtubeVideoId
+        ? `https://i.ytimg.com/vi/${episode.youtubeVideoId}/maxresdefault.jpg`
+        : `${siteConfig.siteUrl}/api/og?title=${encodeURIComponent(episode.title)}&type=EPISODE`);
 
   return {
     title,

@@ -16,6 +16,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.amazonaws.com',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.onrender.com',
+      },
     ],
   },
   async redirects() {
@@ -62,7 +70,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com https://www.googletagmanager.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://www.gravatar.com https://*.gravatar.com https://i.ytimg.com https://img.youtube.com https://*.amazonaws.com https://*.google-analytics.com",
+              "img-src 'self' data: blob: https://www.gravatar.com https://*.gravatar.com https://i.ytimg.com https://img.youtube.com https://*.amazonaws.com https://*.google-analytics.com https://*.supabase.co https://*.onrender.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "frame-src 'self' https://www.youtube-nocookie.com",
               "connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 ws: wss: https://www.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",

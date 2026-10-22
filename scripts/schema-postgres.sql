@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS media (
   sizes_og_mime_type TEXT,
   sizes_og_filesize NUMERIC,
   sizes_og_filename TEXT,
+  data_base64 TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
