@@ -192,11 +192,11 @@ export const CommandPalette: React.FC<{ isOpen: boolean; onClose: () => void }> 
       role="dialog"
       aria-modal="true"
       aria-label="Global Command Palette Search"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-24 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-24 p-4 !m-0"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#0F1B2D]/70 backdrop-blur-xs transition-opacity duration-150"
+        className="fixed inset-0 bg-[#0F1B2D]/70 backdrop-blur-xs transition-opacity duration-150 !m-0"
         onClick={onClose}
       />
 

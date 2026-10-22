@@ -161,13 +161,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = (props) => {
           aria-label="Close navigation overlay"
           onClick={() => setIsMobileOpen(false)}
           onKeyDown={(e) => e.key === 'Escape' && setIsMobileOpen(false)}
-          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-200"
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-200 !m-0"
         />
       )}
 
       <aside
         aria-label="Admin Navigation Sidebar"
-        className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 bg-[#0F1B2D] text-slate-300 border-r border-white/[0.08] flex flex-col transition-all duration-200 select-none shadow-2xl ${
+        className={`fixed inset-y-0 left-0 z-40 lg:z-30 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 bg-[#0F1B2D] text-slate-300 border-r border-white/[0.08] flex flex-col transition-all duration-200 select-none shadow-2xl ${
           isCollapsed ? 'w-[72px]' : 'w-[264px]'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >

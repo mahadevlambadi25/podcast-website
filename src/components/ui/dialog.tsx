@@ -6,8 +6,8 @@ import { X } from 'lucide-react';
 export interface DialogProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  description?: string;
+  title: React.ReactNode;
+  description?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -54,18 +54,18 @@ export const Dialog: React.FC<DialogProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 !m-0 overflow-y-auto"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#0F1B2D]/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in !m-0"
         onClick={onClose}
       />
 
       {/* Dialog Surface */}
       <div
         ref={dialogRef}
-        className={`relative w-full ${maxWidthStyles[maxWidth]} rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 z-10 animate-in zoom-in-95 duration-150`}
+        className={`relative w-full ${maxWidthStyles[maxWidth]} rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 z-10 animate-in zoom-in-95 duration-150 !m-0`}
       >
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -73,7 +73,7 @@ export const Dialog: React.FC<DialogProps> = ({
               {title}
             </h2>
             {description && (
-              <p className="text-sm text-slate-500 mt-1 leading-normal">{description}</p>
+              <div className="text-sm text-slate-500 mt-1 leading-normal">{description}</div>
             )}
           </div>
           <button

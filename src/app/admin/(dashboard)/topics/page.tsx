@@ -13,6 +13,7 @@ import {
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
+import { Dialog } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { generateSlug } from '@/utils/slug';
@@ -266,84 +267,72 @@ export default function TopicsPage() {
       </div>
 
       {/* Create / Edit Topic Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-serif font-bold text-slate-900">
-                {editingTopic ? 'Edit Topic' : 'Create New Topic'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4 py-4 text-xs">
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  Topic Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Artificial Intelligence"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  URL Slug *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Editorial pillar summary..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border text-slate-600 hover:bg-slate-50 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{editingTopic ? 'Save Changes' : 'Create Topic'}</span>
-                </button>
-              </div>
-            </form>
+      <Dialog
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingTopic ? 'Edit Topic' : 'Create New Topic'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSave} className="space-y-4 pt-2 text-xs">
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              Topic Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. Artificial Intelligence"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              URL Slug *
+            </label>
+            <input
+              type="text"
+              required
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Editorial pillar summary..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-3.5 py-2 rounded-xl border text-slate-600 hover:bg-slate-50 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>{editingTopic ? 'Save Changes' : 'Create Topic'}</span>
+            </button>
+          </div>
+        </form>
+      </Dialog>
 
       {/* Safe Delete Modal */}
       <ConfirmDialog

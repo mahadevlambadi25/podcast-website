@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Eye,
 } from 'lucide-react';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 
@@ -211,49 +212,15 @@ export default function ContactMessagesPage() {
       </div>
 
       {/* Message Reader Drawer */}
-      {selectedMessage && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in">
-          <div className="w-full max-w-lg bg-white h-full min-h-screen shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="text-base font-serif font-bold text-slate-900">
-                  Message Details
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMessage(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Message Header */}
-              <div className="my-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">From:</span>
-                  <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedMessage.name}</p>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">Email:</span>
-                  <p className="text-slate-800 mt-0.5 font-mono">{selectedMessage.email}</p>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">Received:</span>
-                  <p className="text-slate-600 mt-0.5">{new Date(selectedMessage.created_at).toLocaleString()}</p>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="py-2">
-                <span className="text-xs font-semibold uppercase text-slate-500 block mb-2">Message Content:</span>
-                <div className="p-4 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-                  {selectedMessage.message}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+      <Sheet
+        isOpen={Boolean(selectedMessage)}
+        onClose={() => setSelectedMessage(null)}
+        title="Message Details"
+        description={selectedMessage ? `Received ${new Date(selectedMessage.created_at).toLocaleString()}` : ''}
+        width="lg"
+        footer={
+          selectedMessage && (
+            <div className="w-full flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -274,9 +241,37 @@ export default function ContactMessagesPage() {
                 <span>Reply by Email</span>
               </a>
             </div>
+          )
+        }
+      >
+        {selectedMessage && (
+          <div className="space-y-4">
+            {/* Message Header */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">From:</span>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedMessage.name}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">Email:</span>
+                <p className="text-slate-800 mt-0.5 font-mono">{selectedMessage.email}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">Received:</span>
+                <p className="text-slate-600 mt-0.5">{new Date(selectedMessage.created_at).toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div>
+              <span className="text-xs font-semibold uppercase text-slate-500 block mb-2">Message Content:</span>
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+                {selectedMessage.message}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
 
       {/* Delete Confirmation Modal */}
       <ConfirmDialog

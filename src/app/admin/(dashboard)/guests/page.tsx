@@ -21,6 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { generateSlug } from '@/utils/slug';
@@ -420,24 +421,34 @@ export default function GuestsPage() {
       </div>
 
       {/* Add / Edit Drawer Modal */}
-      {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in">
-          <div className="w-full max-w-lg bg-white h-full min-h-screen shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <h2 className="text-lg font-serif font-bold text-slate-900">
-                  {editingGuest ? 'Edit Leader Profile' : 'Add New Leader'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form id="guest-form" onSubmit={handleSave} className="space-y-4 py-4 text-xs">
+      <Sheet
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title={editingGuest ? 'Edit Leader Profile' : 'Add New Leader'}
+        description={editingGuest ? 'Update profile information, company credentials, and portrait image.' : 'Add a new executive profile to associate with podcast episodes.'}
+        width="lg"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(false)}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="guest-form"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>{editingGuest ? 'Save Changes' : 'Create Leader'}</span>
+            </button>
+          </>
+        }
+      >
+        <form id="guest-form" onSubmit={handleSave} className="space-y-4 py-1 text-xs">
                 <div>
                   <label className="block font-semibold uppercase text-slate-700 mb-1">
                     Full Name *
@@ -614,29 +625,7 @@ export default function GuestsPage() {
                   </div>
                 </div>
               </form>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsDrawerOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="guest-form"
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
-              >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                <span>{editingGuest ? 'Save Changes' : 'Create Leader'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Sheet>
 
       {/* Safe Delete Modal with Dependency Protection Warning */}
       <ConfirmDialog

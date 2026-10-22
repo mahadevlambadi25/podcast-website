@@ -23,6 +23,7 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 
@@ -425,103 +426,15 @@ export default function MediaLibraryPage() {
       )}
 
       {/* Asset Detail / Metadata Drawer */}
-      {selectedAsset && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in">
-          <div className="w-full max-w-md bg-white h-full min-h-screen shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="text-base font-serif font-bold text-slate-900 truncate">
-                  {selectedAsset.filename}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setSelectedAsset(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Preview */}
-              <div className="my-4 aspect-video rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
-                <img
-                  src={selectedAsset.url}
-                  alt={selectedAsset.alt || ''}
-                  className="max-h-full max-w-full object-contain"
-                />
-              </div>
-
-              {/* File Info */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs space-y-1.5 text-slate-600">
-                <p>
-                  <span className="font-semibold text-slate-800">Filesize:</span>{' '}
-                  {formatFileSize(selectedAsset.filesize)}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-800">MIME Type:</span>{' '}
-                  {selectedAsset.mime_type || 'image'}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-800">Public URL:</span>{' '}
-                  <span className="font-mono text-[11px] text-slate-500 break-all">
-                    {selectedAsset.url}
-                  </span>
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-800">Active References:</span>{' '}
-                  {selectedAsset.usage_count > 0 ? (
-                    <span className="text-emerald-700 font-semibold">
-                      {selectedAsset.usage_count} linked item(s)
-                    </span>
-                  ) : (
-                    'Not referenced by any episode or guest'
-                  )}
-                </p>
-              </div>
-
-              {/* Copy URL Button */}
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={() => copyUrlToClipboard(selectedAsset)}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  {copiedId === selectedAsset.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedId === selectedAsset.id ? 'URL Copied!' : 'Copy Direct Asset URL'}</span>
-                </button>
-              </div>
-
-              {/* Metadata Form */}
-              <div className="mt-5 space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold uppercase text-slate-700 mb-1">
-                    Alt Text (Accessibility)
-                  </label>
-                  <input
-                    type="text"
-                    value={editAlt}
-                    onChange={(e) => setEditAlt(e.target.value)}
-                    placeholder="Short description for screen readers and SEO"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold uppercase text-slate-700 mb-1">
-                    Caption / Attribution
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={editCaption}
-                    onChange={(e) => setEditCaption(e.target.value)}
-                    placeholder="Optional image credit or caption..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+      <Sheet
+        isOpen={Boolean(selectedAsset)}
+        onClose={() => setSelectedAsset(null)}
+        title={selectedAsset?.filename || 'Asset Details'}
+        description="Inspect metadata, direct URLs, and active content links."
+        width="md"
+        footer={
+          selectedAsset && (
+            <div className="w-full flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -544,9 +457,91 @@ export default function MediaLibraryPage() {
                 <span>Save Metadata</span>
               </button>
             </div>
+          )
+        }
+      >
+        {selectedAsset && (
+          <div className="space-y-4">
+            {/* Preview */}
+            <div className="aspect-video rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
+              <img
+                src={selectedAsset.url}
+                alt={selectedAsset.alt || ''}
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+
+            {/* File Info */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs space-y-1.5 text-slate-600">
+              <p>
+                <span className="font-semibold text-slate-800">Filesize:</span>{' '}
+                {formatFileSize(selectedAsset.filesize)}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">MIME Type:</span>{' '}
+                {selectedAsset.mime_type || 'image'}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">Public URL:</span>{' '}
+                <span className="font-mono text-[11px] text-slate-500 break-all">
+                  {selectedAsset.url}
+                </span>
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">Active References:</span>{' '}
+                {selectedAsset.usage_count > 0 ? (
+                  <span className="text-emerald-700 font-semibold">
+                    {selectedAsset.usage_count} linked item(s)
+                  </span>
+                ) : (
+                  'Not referenced by any episode or guest'
+                )}
+              </p>
+            </div>
+
+            {/* Copy URL Button */}
+            <div>
+              <button
+                type="button"
+                onClick={() => copyUrlToClipboard(selectedAsset)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                {copiedId === selectedAsset.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedId === selectedAsset.id ? 'URL Copied!' : 'Copy Direct Asset URL'}</span>
+              </button>
+            </div>
+
+            {/* Metadata Form */}
+            <div className="space-y-3 text-xs pt-1">
+              <div>
+                <label className="block font-semibold uppercase text-slate-700 mb-1">
+                  Alt Text (Accessibility)
+                </label>
+                <input
+                  type="text"
+                  value={editAlt}
+                  onChange={(e) => setEditAlt(e.target.value)}
+                  placeholder="Short description for screen readers and SEO"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold uppercase text-slate-700 mb-1">
+                  Caption / Attribution
+                </label>
+                <textarea
+                  rows={2}
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  placeholder="Optional image credit or caption..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
 
       {/* Safe Delete Modal */}
       <ConfirmDialog

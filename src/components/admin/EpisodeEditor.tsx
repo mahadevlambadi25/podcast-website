@@ -966,7 +966,15 @@ export function EpisodeEditor({ initialData, isNew = false }: EpisodeEditorProps
 
       {/* Media Library Selector Modal */}
       {isMediaModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select Episode Cover Artwork"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in !m-0"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsMediaModalOpen(false);
+          }}
+        >
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">

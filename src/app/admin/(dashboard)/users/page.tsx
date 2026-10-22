@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 
@@ -242,85 +243,73 @@ export default function UsersManagementPage() {
       </div>
 
       {/* Create / Edit User Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 border border-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-serif font-bold text-slate-900">
-                {editingUser ? 'Edit User Permissions' : 'Invite / Add Team Member'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4 py-4 text-xs">
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="editor@uncharteredpodcast.com"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  {editingUser ? 'Reset Password (Leave blank to keep current)' : 'Password *'}
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold uppercase text-slate-700 mb-1">
-                  Permission Role *
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
-                >
-                  <option value="editor">Editor — Manage episodes, leaders, and media</option>
-                  <option value="admin">Administrator — Full platform, security & users control</option>
-                </select>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border text-slate-600 hover:bg-slate-50 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{editingUser ? 'Save Changes' : 'Create User'}</span>
-                </button>
-              </div>
-            </form>
+      <Dialog
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingUser ? 'Edit User Permissions' : 'Invite / Add Team Member'}
+        maxWidth="md"
+      >
+        <form onSubmit={handleSave} className="space-y-4 pt-2 text-xs">
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="editor@uncharteredpodcast.com"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              {editingUser ? 'Reset Password (Leave blank to keep current)' : 'Password *'}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold uppercase text-slate-700 mb-1">
+              Permission Role *
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as any)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+            >
+              <option value="editor">Editor — Manage episodes, leaders, and media</option>
+              <option value="admin">Administrator — Full platform, security & users control</option>
+            </select>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-3.5 py-2 rounded-xl border text-slate-600 hover:bg-slate-50 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C9A24B] hover:bg-[#D4B05C] text-[#0F1B2D] text-xs font-semibold shadow-md disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>{editingUser ? 'Save Changes' : 'Create User'}</span>
+            </button>
+          </div>
+        </form>
+      </Dialog>
 
       {/* Safe Delete Modal */}
       <ConfirmDialog

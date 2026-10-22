@@ -62,6 +62,7 @@
   html {
     overflow-x: clip;
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -72,6 +73,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
+  }
+
+  /* Prevent Tailwind sibling margin rules (e.g. .space-y-*) from bleeding onto fixed overlays, dialogs, and slide-overs */
+  .fixed.inset-0,
+  .fixed.inset-y-0,
+  [role="dialog"] {
+    margin: 0 !important;
   }
 
   h1, h2, h3, h4, .font-editorial {

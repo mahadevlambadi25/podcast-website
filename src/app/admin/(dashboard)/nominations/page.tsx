@@ -15,6 +15,7 @@ import {
   Loader2,
   ExternalLink,
 } from 'lucide-react';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 
@@ -290,100 +291,15 @@ export default function NominationsPage() {
       </div>
 
       {/* Review Drawer */}
-      {selectedNom && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in">
-          <div className="w-full max-w-lg bg-white h-full min-h-screen shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div>
-                  <h2 className="text-base font-serif font-bold text-slate-900">
-                    Candidate Nomination Review
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    ID: {selectedNom.id} · Submitted {new Date(selectedNom.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedNom(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Nominee Details Card */}
-              <div className="my-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">Nominee:</span>
-                  <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedNom.guest_name}</p>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">Role & Organization:</span>
-                  <p className="text-slate-800 mt-0.5">{selectedNom.guest_role_company || '—'}</p>
-                </div>
-                {selectedNom.profile_link && (
-                  <div>
-                    <span className="font-semibold text-slate-500 uppercase">Profile Link:</span>
-                    <a
-                      href={selectedNom.profile_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#C9A24B] hover:underline flex items-center gap-1 mt-0.5 break-all"
-                    >
-                      <span>{selectedNom.profile_link}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
-                  </div>
-                )}
-                <div>
-                  <span className="font-semibold text-slate-500 uppercase">Editorial Pitch / Why them:</span>
-                  <p className="text-slate-700 mt-0.5 whitespace-pre-wrap leading-relaxed">
-                    {selectedNom.reason || 'No pitch provided.'}
-                  </p>
-                </div>
-                <div className="pt-2 border-t border-slate-200/60">
-                  <span className="font-semibold text-slate-500 uppercase">Submitted By:</span>
-                  <p className="text-slate-800 mt-0.5">
-                    {selectedNom.name} &lt;{selectedNom.email}&gt;
-                  </p>
-                </div>
-              </div>
-
-              {/* Reviewer Action Form */}
-              <div className="space-y-4 pt-2 text-xs">
-                <div>
-                  <label className="block font-semibold uppercase text-slate-700 mb-1">
-                    Editorial Review Decision
-                  </label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold capitalize"
-                  >
-                    <option value="pending">Pending Review</option>
-                    <option value="under_review">Under Editorial Review</option>
-                    <option value="approved">Approved for Invitation</option>
-                    <option value="declined">Declined</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold uppercase text-slate-700 mb-1">
-                    Internal Editorial Notes
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    placeholder="Private notes for the production team regarding scheduling, topic alignment, or research..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+      <Sheet
+        isOpen={Boolean(selectedNom)}
+        onClose={() => setSelectedNom(null)}
+        title="Candidate Nomination Review"
+        description={selectedNom ? `ID: ${selectedNom.id} · Submitted ${new Date(selectedNom.created_at).toLocaleString()}` : ''}
+        width="lg"
+        footer={
+          selectedNom && (
+            <div className="w-full flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -406,9 +322,83 @@ export default function NominationsPage() {
                 <span>Save Review</span>
               </button>
             </div>
+          )
+        }
+      >
+        {selectedNom && (
+          <div className="space-y-4">
+            {/* Nominee Details Card */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">Nominee:</span>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedNom.guest_name}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">Role & Organization:</span>
+                <p className="text-slate-800 mt-0.5">{selectedNom.guest_role_company || '—'}</p>
+              </div>
+              {selectedNom.profile_link && (
+                <div>
+                  <span className="font-semibold text-slate-500 uppercase">Profile Link:</span>
+                  <a
+                    href={selectedNom.profile_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#C9A24B] hover:underline flex items-center gap-1 mt-0.5 break-all"
+                  >
+                    <span>{selectedNom.profile_link}</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                </div>
+              )}
+              <div>
+                <span className="font-semibold text-slate-500 uppercase">Editorial Pitch / Why them:</span>
+                <p className="text-slate-700 mt-0.5 whitespace-pre-wrap leading-relaxed">
+                  {selectedNom.reason || 'No pitch provided.'}
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60">
+                <span className="font-semibold text-slate-500 uppercase">Submitted By:</span>
+                <p className="text-slate-800 mt-0.5">
+                  {selectedNom.name} &lt;{selectedNom.email}&gt;
+                </p>
+              </div>
+            </div>
+
+            {/* Reviewer Action Form */}
+            <div className="space-y-4 pt-2 text-xs">
+              <div>
+                <label className="block font-semibold uppercase text-slate-700 mb-1">
+                  Editorial Review Decision
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold capitalize"
+                >
+                  <option value="pending">Pending Review</option>
+                  <option value="under_review">Under Editorial Review</option>
+                  <option value="approved">Approved for Invitation</option>
+                  <option value="declined">Declined</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold uppercase text-slate-700 mb-1">
+                  Internal Editorial Notes
+                </label>
+                <textarea
+                  rows={4}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Private notes for the production team regarding scheduling, topic alignment, or research..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
 
       {/* Delete Confirmation Modal */}
       <ConfirmDialog
