@@ -1,15 +1,16 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Building, Linkedin, Globe, ExternalLink, Quote, Sparkles, Video } from 'lucide-react';
+import { Building, Linkedin, Globe, ExternalLink, Quote, Sparkles, Video, EyeOff } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { getGuestBySlug, getEpisodesForGuest, getPublishedGuests, getPayloadClient, getRedirectForPath } from '@/lib/payload';
+import { getCurrentUser } from '@/lib/auth/session';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { RichText } from '@/components/RichText';
 import { EpisodeCard } from '@/components/EpisodeCard';
 import { GuestCard } from '@/components/GuestCard';
+import { GuestPortrait } from '@/components/GuestPortrait';
 
 export const revalidate = 60;
 
@@ -27,6 +28,17 @@ export async function generateMetadata({ params }: GuestPageProps): Promise<Meta
     return {
       title: 'Leader Not Found',
     };
+  }
+
+  // Non-published guests hidden from public metadata unless previewed by authenticated user
+  if (guest.status !== 'published') {
+    const user = await getCurrentUser();
+    if (!user) {
+      return {
+        title: 'Leader Not Found',
+        robots: { index: false, follow: false },
+      };
+    }
   }
 
   const title = guest.seoTitle || `${guest.fullName} — Biography & Podcast Episodes | ${siteConfig.shortName}`;
@@ -79,6 +91,15 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
     notFound();
   }
 
+  // Non-published guests only accessible to authenticated team members (preview mode)
+  const isDraft = guest.status !== 'published';
+  if (isDraft) {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      notFound();
+    }
+  }
+
   const [episodes, allGuestsRes] = await Promise.all([
     getEpisodesForGuest(guest.id),
     getPublishedGuests({ limit: 4 }),
@@ -86,12 +107,18 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
   const relatedGuests = allGuestsRes.docs.filter((g: any) => g.id !== guest.id).slice(0, 3);
 
   const portraitObj = guest.portrait && typeof guest.portrait === 'object' ? (guest.portrait as any) : null;
-  const portraitUrl = portraitObj?.url || '/placeholders/portrait-placeholder.svg';
+  const portraitUrl = portraitObj?.url || guest.portraitUrl || '/placeholders/portrait-placeholder.svg';
   const altText = guest.portraitAlt || portraitObj?.alt || guest.fullName;
 
   const absolutePortraitUrl = portraitUrl.startsWith('http')
     ? portraitUrl
     : `${siteConfig.siteUrl}${portraitUrl}`;
+
+  // Robust link resolution checking both structured links object and legacy flat fields
+  const linkedinLink = guest.links?.linkedin || guest.links_linkedin || guest.linksLinkedin;
+  const websiteLink = guest.links?.website || guest.links_website || guest.linksWebsite;
+  const otherLink = guest.links?.other || guest.links_other || guest.linksOther;
+  const hasSocialLinks = Boolean(linkedinLink || websiteLink || otherLink);
 
   // Schema.org Person JSON-LD
   const personJsonLd = {
@@ -108,11 +135,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
     description: guest.shortOverview,
     image: absolutePortraitUrl,
     url: `${siteConfig.siteUrl}/guests/${guest.slug}`,
-    sameAs: [
-      guest.links?.linkedin,
-      guest.links?.website,
-      guest.links?.other,
-    ].filter(Boolean),
+    sameAs: [linkedinLink, websiteLink, otherLink].filter(Boolean),
   };
 
   const breadcrumbJsonLd = {
@@ -139,6 +162,25 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
+      {isDraft && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <EyeOff className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                Draft Preview Mode
+              </p>
+              <p className="text-xs text-amber-700">
+                This guest profile is unpublished and only visible to authenticated administrators.
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 bg-amber-200/80 rounded-md text-[10px] font-bold uppercase tracking-wider text-amber-900">
+            {guest.status}
+          </span>
+        </div>
+      )}
+
       <Breadcrumbs
         items={[
           { label: 'Guests', href: '/guests' },
@@ -151,7 +193,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
         {/* Portrait 4:5 with Refined Bezel */}
         <div data-reveal data-reveal-delay="1" className="lg:col-span-5 p-3 rounded-3xl bg-white border border-[#DFE3E8] shadow-xl">
           <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-[#EDE8DE] shadow-inner">
-            <Image
+            <GuestPortrait
               src={portraitUrl}
               alt={altText}
               fill
@@ -159,7 +201,7 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
               priority
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/70 via-transparent to-transparent opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#101C2C]/70 via-transparent to-transparent opacity-80 pointer-events-none" />
             {guest.portraitCredit && (
               <div className="absolute bottom-3 right-3 text-[10px] text-white bg-[#101C2C]/80 px-2.5 py-0.5 rounded-lg backdrop-blur border border-white/10">
                 Photo: {guest.portraitCredit}
@@ -215,11 +257,11 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
           </div>
 
           {/* Social / Web Links */}
-          {(guest.links?.linkedin || guest.links?.website || guest.links?.other) && (
-            <div className="flex items-center gap-3 pt-2">
-              {guest.links.linkedin && (
+          {hasSocialLinks && (
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {linkedinLink && (
                 <a
-                  href={guest.links.linkedin}
+                  href={linkedinLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="neu-btn px-4 py-2.5 rounded-xl text-neu-charcoal text-xs font-bold flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -228,9 +270,9 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
                   LinkedIn Profile
                 </a>
               )}
-              {guest.links.website && (
+              {websiteLink && (
                 <a
-                  href={guest.links.website}
+                  href={websiteLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="neu-btn px-4 py-2.5 rounded-xl text-neu-charcoal text-xs font-bold flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -239,9 +281,9 @@ export default async function GuestDetailPage({ params }: GuestPageProps) {
                   Website
                 </a>
               )}
-              {guest.links.other && (
+              {otherLink && (
                 <a
-                  href={guest.links.other}
+                  href={otherLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="neu-btn px-4 py-2.5 rounded-xl text-neu-charcoal text-xs font-bold flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"

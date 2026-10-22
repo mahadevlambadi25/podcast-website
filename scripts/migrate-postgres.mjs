@@ -234,6 +234,22 @@ const MIGRATIONS = [
       `);
     },
   },
+  {
+    version: '20261022_010_guests_portrait_url',
+    name: 'Add portrait_url column to guests for direct URL persistence and sync with media',
+    up: async (client) => {
+      await client.query(`
+        ALTER TABLE guests
+          ADD COLUMN IF NOT EXISTS portrait_url TEXT;
+      `);
+      await client.query(`
+        UPDATE guests g
+        SET portrait_url = m.url
+        FROM media m
+        WHERE g.portrait_id = m.id AND (g.portrait_url IS NULL OR g.portrait_url = '');
+      `);
+    },
+  },
 ];
 
 export async function runPostgresMigrations() {

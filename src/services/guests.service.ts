@@ -1,5 +1,7 @@
 import { db } from '@/lib/db/client';
 import { normalizeIsoTimestamp, toUtcIsoString } from '@/lib/date';
+import { normalizeUrl, normalizeImageUrl } from '@/utils/url';
+import { invalidatePodcastCache } from '@/lib/podcast';
 
 export interface GuestDetail {
   id: number;
@@ -77,7 +79,7 @@ export async function listGuests(options: {
     sql: `
       SELECT 
         g.*,
-        m.url as portrait_url,
+        COALESCE(g.portrait_url, m.url) as portrait_url,
         (SELECT COUNT(DISTINCT parent_id) FROM episodes_rels WHERE path = 'guests' AND guests_id = g.id) as episode_count
       FROM guests g
       LEFT JOIN media m ON g.portrait_id = m.id
@@ -153,7 +155,7 @@ export async function getGuestById(id: number): Promise<GuestDetail | null> {
     sql: `
       SELECT 
         g.*,
-        m.url as portrait_url,
+        COALESCE(g.portrait_url, m.url) as portrait_url,
         (SELECT COUNT(DISTINCT parent_id) FROM episodes_rels WHERE path = 'guests' AND guests_id = g.id) as episode_count
       FROM guests g
       LEFT JOIN media m ON g.portrait_id = m.id
@@ -222,20 +224,21 @@ export async function getGuestById(id: number): Promise<GuestDetail | null> {
 export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: number[] }): Promise<number> {
   const now = toUtcIsoString(new Date());
   const bioValue = data.biography || '';
-  const linkedinValue = data.links_linkedin || null;
-  const websiteValue = data.links_website || null;
+  const portraitUrlValue = normalizeImageUrl(data.portrait_url);
+  const linkedinValue = normalizeUrl(data.links_linkedin);
+  const websiteValue = normalizeUrl(data.links_website);
 
-  return await db.transaction(async (tx) => {
+  const guestId = await db.transaction(async (tx) => {
     let insertRes;
     try {
       insertRes = await tx.execute({
         sql: `
           INSERT INTO guests (
             full_name, slug, role, company, short_overview, biography, bio,
-            portrait_id, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
+            portrait_id, portrait_url, portrait_alt, portrait_credit, links_linkedin, linkedin_url,
             links_website, website_url, links_other, featured, status, seo_title,
             seo_description, canonical_override, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           data.full_name || 'Unnamed Guest',
@@ -246,12 +249,13 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
           bioValue,
           bioValue,
           data.portrait_id || null,
+          portraitUrlValue || null,
           data.portrait_alt || null,
           data.portrait_credit || null,
-          linkedinValue,
-          linkedinValue,
-          websiteValue,
-          websiteValue,
+          linkedinValue || null,
+          linkedinValue || null,
+          websiteValue || null,
+          websiteValue || null,
           data.links_other || null,
           data.featured ? 1 : 0,
           data.status || 'draft',
@@ -268,9 +272,9 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
           sql: `
             INSERT INTO guests (
               full_name, slug, role, company, short_overview, bio,
-              portrait_id, linkedin_url, website_url, featured, status,
+              portrait_id, portrait_url, linkedin_url, website_url, featured, status,
               seo_title, seo_description, canonical_override, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           args: [
             data.full_name || 'Unnamed Guest',
@@ -280,8 +284,9 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
             data.short_overview || '',
             bioValue,
             data.portrait_id || null,
-            linkedinValue,
-            websiteValue,
+            portraitUrlValue || null,
+            linkedinValue || null,
+            websiteValue || null,
             data.featured ? 1 : 0,
             data.status || 'draft',
             data.seo_title || null,
@@ -309,6 +314,14 @@ export async function createGuest(data: Partial<GuestDetail> & { topic_ids?: num
 
     return newId;
   });
+
+  try {
+    invalidatePodcastCache();
+  } catch {
+    // Cache invalidation failure should not abort creation
+  }
+
+  return guestId;
 }
 
 export async function updateGuest(
@@ -316,6 +329,9 @@ export async function updateGuest(
   data: Partial<GuestDetail> & { topic_ids?: number[] }
 ): Promise<void> {
   const now = toUtcIsoString(new Date());
+  const portraitUrlValue = data.portrait_url !== undefined ? normalizeImageUrl(data.portrait_url) : null;
+  const linkedinValue = data.links_linkedin !== undefined ? normalizeUrl(data.links_linkedin) : null;
+  const websiteValue = data.links_website !== undefined ? normalizeUrl(data.links_website) : null;
 
   await db.transaction(async (tx) => {
     try {
@@ -330,6 +346,7 @@ export async function updateGuest(
             biography = COALESCE(?, biography),
             bio = COALESCE(?, bio),
             portrait_id = COALESCE(?, portrait_id),
+            portrait_url = COALESCE(?, portrait_url),
             portrait_alt = COALESCE(?, portrait_alt),
             portrait_credit = COALESCE(?, portrait_credit),
             links_linkedin = COALESCE(?, links_linkedin),
@@ -354,12 +371,13 @@ export async function updateGuest(
           data.biography ?? null,
           data.biography ?? null,
           data.portrait_id ?? null,
+          portraitUrlValue ?? (data.portrait_url !== undefined ? '' : null),
           data.portrait_alt ?? null,
           data.portrait_credit ?? null,
-          data.links_linkedin ?? null,
-          data.links_linkedin ?? null,
-          data.links_website ?? null,
-          data.links_website ?? null,
+          linkedinValue ?? (data.links_linkedin !== undefined ? '' : null),
+          linkedinValue ?? (data.links_linkedin !== undefined ? '' : null),
+          websiteValue ?? (data.links_website !== undefined ? '' : null),
+          websiteValue ?? (data.links_website !== undefined ? '' : null),
           data.links_other ?? null,
           data.featured !== undefined ? (data.featured ? 1 : 0) : null,
           data.status ?? null,
@@ -382,6 +400,7 @@ export async function updateGuest(
               short_overview = COALESCE(?, short_overview),
               bio = COALESCE(?, bio),
               portrait_id = COALESCE(?, portrait_id),
+              portrait_url = COALESCE(?, portrait_url),
               linkedin_url = COALESCE(?, linkedin_url),
               website_url = COALESCE(?, website_url),
               featured = COALESCE(?, featured),
@@ -400,8 +419,9 @@ export async function updateGuest(
             data.short_overview ?? null,
             data.biography ?? null,
             data.portrait_id ?? null,
-            data.links_linkedin ?? null,
-            data.links_website ?? null,
+            portraitUrlValue ?? (data.portrait_url !== undefined ? '' : null),
+            linkedinValue ?? (data.links_linkedin !== undefined ? '' : null),
+            websiteValue ?? (data.links_website !== undefined ? '' : null),
             data.featured !== undefined ? (data.featured ? 1 : 0) : null,
             data.status ?? null,
             data.seo_title ?? null,
@@ -429,6 +449,12 @@ export async function updateGuest(
       }
     }
   });
+
+  try {
+    invalidatePodcastCache();
+  } catch {
+    // Cache invalidation failure should not abort update
+  }
 }
 
 export async function deleteGuest(id: number): Promise<{ success: boolean; error?: string }> {
@@ -457,6 +483,12 @@ export async function deleteGuest(id: number): Promise<{ success: boolean; error
     await tx.execute({ sql: `DELETE FROM guests_key_insights WHERE _parent_id = ?`, args: [id] });
     await tx.execute({ sql: `DELETE FROM guests WHERE id = ?`, args: [id] });
   });
+
+  try {
+    invalidatePodcastCache();
+  } catch {
+    // Cache invalidation failure should not abort deletion
+  }
 
   return { success: true };
 }

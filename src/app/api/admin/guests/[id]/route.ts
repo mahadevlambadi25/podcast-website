@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getGuestById, updateGuest, deleteGuest } from '@/services/guests.service';
 import { logActivity } from '@/services/audit.service';
@@ -53,6 +54,16 @@ export async function PUT(
     const body = await req.json();
     await updateGuest(numId, body);
 
+    try {
+      revalidatePath('/guests');
+      revalidatePath('/');
+      if (body.slug) {
+        revalidatePath(`/guests/${body.slug}`);
+      }
+    } catch {
+      // Revalidation errors should not fail response
+    }
+
     await logActivity({
       user_id: user.id,
       user_email: user.email,
@@ -96,6 +107,16 @@ export async function DELETE(
     const result = await deleteGuest(numId);
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 409 });
+    }
+
+    try {
+      revalidatePath('/guests');
+      revalidatePath('/');
+      if (existing.slug) {
+        revalidatePath(`/guests/${existing.slug}`);
+      }
+    } catch {
+      // Revalidation errors should not fail response
     }
 
     await logActivity({

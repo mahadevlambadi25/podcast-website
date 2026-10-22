@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS guests (
   biography TEXT,
   bio TEXT,
   portrait_id INTEGER REFERENCES media(id) ON DELETE SET NULL,
+  portrait_url TEXT,
   portrait_alt TEXT,
   portrait_credit TEXT,
   links_linkedin TEXT,

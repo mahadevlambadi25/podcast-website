@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/session';
 import { listGuests, createGuest } from '@/services/guests.service';
 import { logActivity } from '@/services/audit.service';
@@ -41,6 +42,16 @@ export async function POST(req: NextRequest) {
     }
 
     const id = await createGuest(body);
+
+    try {
+      revalidatePath('/guests');
+      revalidatePath('/');
+      if (body.slug) {
+        revalidatePath(`/guests/${body.slug}`);
+      }
+    } catch {
+      // Revalidation errors should not fail the API response
+    }
 
     await logActivity({
       user_id: user.id,

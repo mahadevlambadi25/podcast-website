@@ -118,7 +118,7 @@ export async function listEpisodes(options: {
     // Fetch related guests
     const relGuestsRes = await db.execute({
       sql: `
-        SELECT r.parent_id, g.id, g.full_name, g.slug, g.role, g.company, m.url as portrait_url
+        SELECT r.parent_id, g.id, g.full_name, g.slug, g.role, g.company, COALESCE(g.portrait_url, m.url) as portrait_url
         FROM episodes_rels r
         JOIN guests g ON r.guests_id = g.id
         LEFT JOIN media m ON g.portrait_id = m.id
@@ -217,7 +217,7 @@ export async function getEpisodeById(id: number): Promise<EpisodeDetail | null> 
   // Related guests
   const guestsRes = await db.execute({
     sql: `
-      SELECT g.id, g.full_name, g.slug, g.role, g.company, m.url as portrait_url
+      SELECT g.id, g.full_name, g.slug, g.role, g.company, COALESCE(g.portrait_url, m.url) as portrait_url
       FROM episodes_rels r
       JOIN guests g ON r.guests_id = g.id
       LEFT JOIN media m ON g.portrait_id = m.id

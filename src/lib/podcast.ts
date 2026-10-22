@@ -8,6 +8,7 @@ import {
   SearchEpisodeItem,
   SearchResults,
 } from '../utils/search';
+import { normalizeUrl, normalizeImageUrl } from '../utils/url';
 
 // In-memory cache for site settings to eliminate repetitive DB queries across concurrent page renders
 let cachedSiteSettings: any = null;
@@ -83,7 +84,7 @@ export async function formatEpisodesBatch(rows: any[]): Promise<any[]> {
   const [guestsRes, topicsRes, takeawaysRes, quotesRes, tagsRes] = await Promise.all([
     db.execute({
       sql: `
-        SELECT r.parent_id, g.id, g.full_name, g.slug, g.role, g.company, m.url as portrait_url
+        SELECT r.parent_id, g.id, g.full_name, g.slug, g.role, g.company, COALESCE(g.portrait_url, m.url) as portrait_url
         FROM episodes_rels r
         JOIN guests g ON r.guests_id = g.id
         LEFT JOIN media m ON g.portrait_id = m.id
@@ -271,9 +272,24 @@ export async function formatGuestsBatch(rows: any[]): Promise<any[]> {
 
   return rows.map((row) => {
     const id = Number(row.id);
-    const portraitUrl = row.portrait_url ? String(row.portrait_url) : null;
+    const rawPortraitUrl = row.portrait_url ? String(row.portrait_url) : null;
+    const portraitUrl = normalizeImageUrl(rawPortraitUrl);
     const topics = topicsByParent.get(id) || [];
     const keyInsights = insightsByParent.get(id) || [];
+
+    const rawLinkedin = row.links_linkedin || row.linkedin_url || null;
+    const rawWebsite = row.links_website || row.website_url || null;
+    const rawOther = row.links_other || null;
+
+    const linksLinkedin = normalizeUrl(rawLinkedin ? String(rawLinkedin) : null);
+    const linksWebsite = normalizeUrl(rawWebsite ? String(rawWebsite) : null);
+    const linksOther = normalizeUrl(rawOther ? String(rawOther) : null);
+
+    const links = {
+      linkedin: linksLinkedin,
+      website: linksWebsite,
+      other: linksOther,
+    };
 
     return {
       id,
@@ -290,12 +306,13 @@ export async function formatGuestsBatch(rows: any[]): Promise<any[]> {
       portrait: portraitUrl ? { url: portraitUrl, alt: row.portrait_alt || row.full_name } : null,
       portraitAlt: row.portrait_alt ? String(row.portrait_alt) : null,
       portraitCredit: row.portrait_credit ? String(row.portrait_credit) : null,
-      linksLinkedin: row.links_linkedin ? String(row.links_linkedin) : (row.linkedin_url ? String(row.linkedin_url) : null),
-      links_linkedin: row.links_linkedin ? String(row.links_linkedin) : (row.linkedin_url ? String(row.linkedin_url) : null),
-      linksWebsite: row.links_website ? String(row.links_website) : (row.website_url ? String(row.website_url) : null),
-      links_website: row.links_website ? String(row.links_website) : (row.website_url ? String(row.website_url) : null),
-      linksOther: row.links_other ? String(row.links_other) : null,
-      links_other: row.links_other ? String(row.links_other) : null,
+      links,
+      linksLinkedin,
+      links_linkedin: linksLinkedin,
+      linksWebsite,
+      links_website: linksWebsite,
+      linksOther,
+      links_other: linksOther,
       featured: Boolean(row.featured),
       status: row.status || 'draft',
       seoTitle: row.seo_title ? String(row.seo_title) : undefined,
@@ -717,7 +734,7 @@ export async function getPublishedGuests(options: {
     // Docs
     const docsRes = await db.execute({
       sql: `
-        SELECT g.*, m.url as portrait_url
+        SELECT g.*, COALESCE(g.portrait_url, m.url) as portrait_url
         FROM guests g
         LEFT JOIN media m ON g.portrait_id = m.id
         WHERE ${whereClause}
@@ -753,7 +770,7 @@ const fetchGuestBySlug = async (slug: string) => {
   try {
     const res = await db.execute({
       sql: `
-        SELECT g.*, m.url as portrait_url
+        SELECT g.*, COALESCE(g.portrait_url, m.url) as portrait_url
         FROM guests g
         LEFT JOIN media m ON g.portrait_id = m.id
         WHERE g.slug = ?

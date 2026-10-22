@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
 import { generateSlug } from '@/utils/slug';
+import { normalizeUrl, normalizeImageUrl } from '@/utils/url';
 
 interface GuestItem {
   id: number;
@@ -145,6 +146,10 @@ export default function GuestsPage() {
       return;
     }
 
+    const cleanPortrait = portraitUrl.trim() ? normalizeImageUrl(portraitUrl.trim()) : null;
+    const cleanLinkedin = linkedinUrl.trim() ? normalizeUrl(linkedinUrl.trim()) : null;
+    const cleanWebsite = websiteUrl.trim() ? normalizeUrl(websiteUrl.trim()) : null;
+
     setIsSaving(true);
     try {
       const payload = {
@@ -154,9 +159,9 @@ export default function GuestsPage() {
         company: company.trim() || null,
         short_overview: shortOverview.trim() || null,
         biography: biography.trim() || null,
-        portrait_url: portraitUrl.trim() || null,
-        links_linkedin: linkedinUrl.trim() || null,
-        links_website: websiteUrl.trim() || null,
+        portrait_url: cleanPortrait,
+        links_linkedin: cleanLinkedin,
+        links_website: cleanWebsite,
         status: guestStatus,
         featured,
       };
@@ -308,12 +313,23 @@ export default function GuestsPage() {
               <div>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#0F1B2D] text-[#C9A24B] font-bold text-sm flex items-center justify-center shrink-0 border border-[#C9A24B]/20">
-                      {g.full_name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')}
+                    <div className="w-12 h-12 rounded-xl bg-[#0F1B2D] text-[#C9A24B] font-bold text-sm flex items-center justify-center shrink-0 border border-[#C9A24B]/20 overflow-hidden relative">
+                      {g.portrait_url ? (
+                        <img
+                          src={g.portrait_url}
+                          alt={g.full_name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        g.full_name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join('')
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-slate-900 text-sm leading-snug">
@@ -507,12 +523,21 @@ export default function GuestsPage() {
                     Portrait Image URL
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={portraitUrl}
                     onChange={(e) => setPortraitUrl(e.target.value)}
-                    placeholder="https://... or /media/..."
+                    onBlur={() => {
+                      if (portraitUrl.trim()) {
+                        const norm = normalizeImageUrl(portraitUrl.trim());
+                        if (norm) setPortraitUrl(norm);
+                      }
+                    }}
+                    placeholder="https://... or /placeholders/portrait-placeholder.svg"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
                   />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Accepts HTTPS image URLs or relative media paths (e.g. /placeholders/...).
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -521,24 +546,42 @@ export default function GuestsPage() {
                       LinkedIn Profile
                     </label>
                     <input
-                      type="url"
+                      type="text"
                       value={linkedinUrl}
                       onChange={(e) => setLinkedinUrl(e.target.value)}
-                      placeholder="https://linkedin.com/in/..."
+                      onBlur={() => {
+                        if (linkedinUrl.trim()) {
+                          const norm = normalizeUrl(linkedinUrl.trim());
+                          if (norm) setLinkedinUrl(norm);
+                        }
+                      }}
+                      placeholder="linkedin.com/in/... or https://..."
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      https:// optional; auto-formatted on save.
+                    </p>
                   </div>
                   <div>
                     <label className="block font-semibold uppercase text-slate-700 mb-1">
                       Website URL
                     </label>
                     <input
-                      type="url"
+                      type="text"
                       value={websiteUrl}
                       onChange={(e) => setWebsiteUrl(e.target.value)}
-                      placeholder="https://..."
+                      onBlur={() => {
+                        if (websiteUrl.trim()) {
+                          const norm = normalizeUrl(websiteUrl.trim());
+                          if (norm) setWebsiteUrl(norm);
+                        }
+                      }}
+                      placeholder="example.com or https://..."
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
                     />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      https:// optional; auto-formatted on save.
+                    </p>
                   </div>
                 </div>
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Building, Award } from 'lucide-react';
+import { GuestPortrait } from '@/components/GuestPortrait';
 
 interface GuestCardProps {
   guest: {
@@ -36,7 +36,7 @@ export function GuestCard({ guest, staggerIndex, className = '' }: GuestCardProp
       {/* 4:5 Portrait Image with Bezel */}
       <div className="p-3 pb-0">
         <Link href={`/guests/${guest.slug}`} className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-[#EDE8DE] block shadow-inner">
-          <Image
+          <GuestPortrait
             src={portraitUrl}
             alt={altText}
             fill
