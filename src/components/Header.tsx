@@ -16,7 +16,17 @@ interface HeaderProps {
 export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -35,7 +45,13 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
     : siteConfig.shortName;
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#101C2C]/95 backdrop-blur-md border-b border-white/10 shadow-lg transition-all">
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled
+          ? 'bg-[#101C2C]/98 backdrop-blur-xl border-b border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.4)]'
+          : 'bg-[#101C2C]/95 backdrop-blur-md border-b border-white/10 shadow-lg'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18 gap-4 lg:gap-6">
           {/* Logo / Brand Editorial Wordmark */}
@@ -166,7 +182,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           id="mobile-navigation-drawer"
           role="region"
           aria-label="Mobile Navigation"
-          className="md:hidden bg-[#101C2C] border-b border-white/15 px-4 pt-3 pb-6 space-y-3 shadow-2xl animate-in slide-in-from-top duration-200"
+          className="md:hidden bg-[#101C2C] border-b border-white/15 px-4 pt-3 pb-6 space-y-3 shadow-2xl animate-in slide-in-from-top duration-200 max-h-[calc(100vh-4.5rem)] overflow-y-auto"
         >
           <nav className="flex flex-col space-y-2">
             {siteConfig.nav.map((item) => {
