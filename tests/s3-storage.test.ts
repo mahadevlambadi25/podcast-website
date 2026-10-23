@@ -138,6 +138,34 @@ describe('AWS S3 Media Storage Integration Suite', () => {
       expect(isS3Configured()).toBe(true);
       expect(isS3Enabled()).toBe(true);
     });
+
+    it('enforces ap-south-1 for podcast-media-mahadev-2026 even if legacy S3_REGION is us-east-1', () => {
+      delete process.env.AWS_REGION;
+      process.env.AWS_S3_BUCKET = 'podcast-media-mahadev-2026';
+      process.env.S3_REGION = 'us-east-1';
+
+      const config = getS3Config();
+      expect(config.region).toBe('ap-south-1');
+    });
+
+    it('strips standard AWS endpoints and does not set forcePathStyle so SDK derives virtual-hosted regional endpoint', () => {
+      process.env.AWS_S3_BUCKET = 'podcast-media-mahadev-2026';
+      process.env.AWS_REGION = 'ap-south-1';
+      process.env.S3_ENDPOINT = 'https://s3.amazonaws.com';
+
+      const config = getS3Config();
+      expect(config.endpoint).toBeUndefined();
+      expect(config.forcePathStyle).toBe(false);
+    });
+
+    it('supports custom local emulator endpoints with forcePathStyle for MinIO or LocalStack', () => {
+      process.env.AWS_S3_BUCKET = 'custom-dev-bucket';
+      process.env.S3_ENDPOINT = 'http://localhost:9000';
+
+      const config = getS3Config();
+      expect(config.endpoint).toBe('http://localhost:9000');
+      expect(config.forcePathStyle).toBe(true);
+    });
   });
 
   describe('2. Security & Credential Redaction', () => {

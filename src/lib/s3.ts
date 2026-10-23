@@ -43,10 +43,20 @@ export function getS3Config(): S3Config {
     cleanEnvValue(process.env.S3_BUCKET) ||
     'podcast-media-mahadev-2026';
 
-  const region =
+  let rawRegion =
     cleanEnvValue(process.env.AWS_REGION) ||
-    cleanEnvValue(process.env.S3_REGION) ||
-    'ap-south-1';
+    cleanEnvValue(process.env.AWS_DEFAULT_REGION) ||
+    cleanEnvValue(process.env.S3_REGION);
+
+  // If the bucket is the production podcast bucket and an obsolete default region (e.g. us-east-1)
+  // was inherited from legacy template env vars without an explicit AWS_REGION, enforce ap-south-1.
+  if (bucket === 'podcast-media-mahadev-2026') {
+    if (!cleanEnvValue(process.env.AWS_REGION) && (!rawRegion || rawRegion === 'us-east-1')) {
+      rawRegion = 'ap-south-1';
+    }
+  }
+
+  const region = rawRegion || 'ap-south-1';
 
   const accessKeyId =
     cleanEnvValue(process.env.AWS_ACCESS_KEY_ID) ||
@@ -58,7 +68,30 @@ export function getS3Config(): S3Config {
     cleanEnvValue(process.env.S3_SECRET_ACCESS_KEY) ||
     undefined;
 
-  const endpoint = cleanEnvValue(process.env.S3_ENDPOINT) || undefined;
+  // Endpoint: Only set if an explicit custom non-AWS endpoint is provided (e.g. MinIO, Cloudflare R2, LocalStack).
+  // Standard AWS S3 must NOT specify an endpoint property; AWS SDK v3 automatically derives
+  // the canonical regional virtual-hosted endpoint (https://<bucket>.s3.<region>.amazonaws.com).
+  const rawEndpoint =
+    cleanEnvValue(process.env.AWS_ENDPOINT_URL_S3) ||
+    cleanEnvValue(process.env.AWS_ENDPOINT_URL) ||
+    cleanEnvValue(process.env.S3_ENDPOINT);
+
+  // If someone passed standard AWS endpoints (e.g. s3.amazonaws.com or s3.ap-south-1.amazonaws.com),
+  // strip it so AWS SDK v3 handles endpoint resolution and virtual hosting natively.
+  const isStandardAwsEndpoint =
+    rawEndpoint &&
+    (rawEndpoint.includes('amazonaws.com') ||
+      rawEndpoint.startsWith('https://s3.') ||
+      rawEndpoint.startsWith('http://s3.'));
+
+  const endpoint = isStandardAwsEndpoint ? undefined : rawEndpoint;
+
+  // Path-style is legacy and explicitly deprecated for AWS S3.
+  // Only enable forcePathStyle if explicitly requested (S3_FORCE_PATH_STYLE=true)
+  // or when targeting local emulators (MinIO / LocalStack).
+  const forcePathStyle =
+    cleanEnvValue(process.env.S3_FORCE_PATH_STYLE) === 'true' ||
+    Boolean(endpoint && (endpoint.includes('localhost') || endpoint.includes('127.0.0.1')));
 
   return {
     bucket,
@@ -66,7 +99,7 @@ export function getS3Config(): S3Config {
     accessKeyId,
     secretAccessKey,
     endpoint,
-    forcePathStyle: Boolean(endpoint),
+    forcePathStyle,
   };
 }
 
@@ -130,8 +163,13 @@ export function getS3Client(): S3Client {
     };
   }
 
+  // Only pass endpoint if an explicit custom non-AWS endpoint is required
   if (config.endpoint) {
     clientConfig.endpoint = config.endpoint;
+  }
+
+  // Only pass forcePathStyle if explicitly true (e.g. MinIO / LocalStack)
+  if (config.forcePathStyle) {
     clientConfig.forcePathStyle = true;
   }
 
