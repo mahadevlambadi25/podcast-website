@@ -34,6 +34,16 @@ services:
         sync: false
       - key: MEDIA_STORAGE_DIR
         value: /var/data/media
+      - key: S3_ENABLED
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
     disk:
       name: unchartered-media-uploads
       mountPath: /var/data/media

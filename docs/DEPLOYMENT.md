@@ -51,8 +51,11 @@ Configure these in Render's Environment Variables dashboard. Never commit actual
 | `NOMINATION_RECIPIENT_EMAIL` | Optional | Destination email for leader nominations | `nominations@uncharteredpodcast.com` |
 | `CONTACT_RECIPIENT_EMAIL` | Optional | Destination email for public inquiries | `contact@uncharteredpodcast.com` |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Optional | Google Analytics 4 Measurement ID | `G-XXXXXXXXXX` |
-| `S3_ENABLED` | Optional | Enables object storage for media uploads | `false` or `true` |
-| `S3_BUCKET` | Optional | S3 / R2 bucket name | `unchartered-media` |
+| `S3_ENABLED` | Optional | Enables object storage for media uploads (`true` or `false`) | `true` |
+| `AWS_S3_BUCKET` | Optional | S3 bucket name (alias `S3_BUCKET`) | `podcast-media-mahadev-2026` |
+| `AWS_REGION` | Optional | AWS region (alias `S3_REGION`) | `ap-south-1` |
+| `AWS_ACCESS_KEY_ID` | Optional | IAM Access Key ID for S3 operations | `AKIA...` |
+| `AWS_SECRET_ACCESS_KEY` | Optional | IAM Secret Access Key for S3 operations | `wJalrXUtnFEMI...` |
 
 ---
 

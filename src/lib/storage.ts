@@ -1,5 +1,32 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  isS3Enabled,
+  uploadObjectToS3,
+  getObjectFromS3,
+  deleteObjectFromS3,
+} from './s3';
+
+export const MIME_MAP: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.avif': 'image/avif',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.m4a': 'audio/x-m4a',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.pdf': 'application/pdf',
+};
+
+export function getMimeType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  return MIME_MAP[ext] || 'application/octet-stream';
+}
 
 /**
  * Returns the primary storage directory for uploaded media.
@@ -79,23 +106,27 @@ export function getMediaSearchDirs(): string[] {
 
 /**
  * Saves a media file buffer to storage.
- * In development, also mirrors to public/media for instant static availability.
+ * If S3 is enabled, uploads to S3 bucket and best-effort mirrors to local disk cache.
+ * If S3 is not enabled, writes to the primary local disk directory.
  */
 export async function saveMediaFile(
   buffer: Buffer,
-  filename: string
-): Promise<{ filename: string; filePath: string }> {
-  const primaryDir = getPrimaryMediaDir();
-  if (!fs.existsSync(primaryDir)) {
-    fs.mkdirSync(primaryDir, { recursive: true });
-  }
-
+  filename: string,
+  contentType?: string
+): Promise<{ filename: string; filePath: string; s3Key?: string; s3Bucket?: string }> {
   const sanitizedFilename = path.basename(filename);
-  const targetPath = path.join(primaryDir, sanitizedFilename);
-  fs.writeFileSync(targetPath, buffer);
+  let targetPath = '';
 
-  // In local development or testing, also mirror to public/media
+  // Write to local disk cache (best-effort)
   try {
+    const primaryDir = getPrimaryMediaDir();
+    if (!fs.existsSync(primaryDir)) {
+      fs.mkdirSync(primaryDir, { recursive: true });
+    }
+    targetPath = path.join(primaryDir, sanitizedFilename);
+    fs.writeFileSync(targetPath, buffer);
+
+    // In development or local testing, also mirror to public/media
     const publicMediaDir = path.resolve(process.cwd(), 'public', 'media');
     if (!fs.existsSync(publicMediaDir)) {
       fs.mkdirSync(publicMediaDir, { recursive: true });
@@ -104,8 +135,28 @@ export async function saveMediaFile(
     if (publicTargetPath !== targetPath) {
       fs.writeFileSync(publicTargetPath, buffer);
     }
-  } catch {
-    // Non-fatal if mirroring fails
+  } catch (diskErr) {
+    // If running in container or cloud without writable local disk, non-fatal if S3 is active
+    if (!isS3Enabled()) {
+      throw diskErr;
+    }
+  }
+
+  // If S3 is enabled, upload to S3 (strict: throw if S3 fails)
+  if (isS3Enabled()) {
+    const mime = contentType || getMimeType(sanitizedFilename);
+    const s3Result = await uploadObjectToS3({
+      key: sanitizedFilename,
+      body: buffer,
+      contentType: mime,
+    });
+
+    return {
+      filename: sanitizedFilename,
+      filePath: targetPath,
+      s3Key: s3Result.key,
+      s3Bucket: s3Result.bucket,
+    };
   }
 
   return { filename: sanitizedFilename, filePath: targetPath };
@@ -155,13 +206,90 @@ export function findMediaFile(filename: string): string | null {
 }
 
 /**
- * Deletes a media file from all candidate locations.
+ * Resolves a media file from S3 or local storage.
+ * Priority:
+ * 1. S3 (if enabled)
+ * 2. Local disk search directories
+ */
+export async function resolveMediaFile(filename: string): Promise<{
+  buffer: Buffer;
+  contentType: string;
+  contentLength: number;
+  source: 's3' | 'disk';
+  etag?: string;
+  lastModified?: Date;
+} | null> {
+  const cleanName = path.basename(filename);
+
+  // 1. Check S3 if enabled
+  if (isS3Enabled()) {
+    try {
+      const s3Object = await getObjectFromS3(cleanName);
+      if (s3Object) {
+        const contentType = s3Object.contentType || getMimeType(cleanName);
+        const contentLength = s3Object.contentLength || s3Object.buffer.length;
+
+        // Asynchronously mirror to local disk cache for instant subsequent reads
+        try {
+          const primaryDir = getPrimaryMediaDir();
+          const targetPath = path.join(primaryDir, cleanName);
+          if (!fs.existsSync(targetPath)) {
+            fs.writeFileSync(targetPath, s3Object.buffer);
+          }
+        } catch {
+          // Non-fatal cache write failure
+        }
+
+        return {
+          buffer: s3Object.buffer,
+          contentType,
+          contentLength,
+          source: 's3',
+          etag: s3Object.etag,
+          lastModified: s3Object.lastModified,
+        };
+      }
+    } catch (s3Err) {
+      console.warn(`S3 resolve warning for "${cleanName}":`, s3Err);
+    }
+  }
+
+  // 2. Check local disk directories
+  const localPath = findMediaFile(cleanName);
+  if (localPath && fs.existsSync(localPath)) {
+    const buffer = fs.readFileSync(localPath);
+    return {
+      buffer,
+      contentType: getMimeType(cleanName),
+      contentLength: buffer.length,
+      source: 'disk',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Deletes a media file from S3 and all local candidate locations.
  */
 export async function deleteMediaFile(filename: string): Promise<boolean> {
   const cleanName = path.basename(filename);
-  const dirs = getMediaSearchDirs();
   let deleted = false;
 
+  // 1. Delete from S3 if enabled
+  if (isS3Enabled()) {
+    try {
+      const s3Deleted = await deleteObjectFromS3(cleanName);
+      if (s3Deleted) {
+        deleted = true;
+      }
+    } catch (s3Err) {
+      console.warn(`Failed to delete S3 object "${cleanName}":`, s3Err);
+    }
+  }
+
+  // 2. Delete from local disk locations
+  const dirs = getMediaSearchDirs();
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     const target = path.join(dir, cleanName);

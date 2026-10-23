@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { listMedia, createMedia } from '@/services/media.service';
 import { logActivity } from '@/services/audit.service';
 import { saveMediaFile } from '@/lib/storage';
+import { sanitizeS3Error } from '@/lib/s3';
 import path from 'path';
 
 export const config = {
@@ -92,9 +93,9 @@ export async function POST(req: NextRequest) {
       .replace(/[^a-z0-9_-]/g, '-');
     const uniqueFilename = `${baseName}-${Date.now()}${ext}`;
 
-    // Write file using unified storage helper
+    // Write file using unified storage helper (uploads to S3 if enabled)
     const buffer = Buffer.from(await file.arrayBuffer());
-    await saveMediaFile(buffer, uniqueFilename);
+    const storageResult = await saveMediaFile(buffer, uniqueFilename, file.type);
 
     const publicUrl = `/media/${uniqueFilename}`;
 
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
       action: 'create',
       entity_type: 'media',
       entity_id: id,
-      details: `Uploaded media asset: ${uniqueFilename} (${file.type})`,
+      details: `Uploaded media asset: ${uniqueFilename} (${file.type})${storageResult.s3Key ? ' to AWS S3' : ''}`,
     });
 
     return NextResponse.json(
@@ -128,9 +129,10 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Error uploading media:', error);
+    const safeError = sanitizeS3Error(error);
+    console.error('Error uploading media:', safeError);
     return NextResponse.json(
-      { error: error.message || 'Failed to upload media' },
+      { error: safeError },
       { status: 500 }
     );
   }

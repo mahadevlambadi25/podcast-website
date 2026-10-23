@@ -201,15 +201,29 @@ export async function deleteMedia(id: number): Promise<{ success: boolean; error
     };
   }
 
-  // Get filename to remove physical file
+  // Fetch media record to verify existence and get filename
   const mediaRes = await db.execute({
     sql: 'SELECT filename FROM media WHERE id = ? LIMIT 1',
     args: [id],
   });
-  if (mediaRes.rows.length > 0 && mediaRes.rows[0].filename) {
-    await deleteMediaFile(String(mediaRes.rows[0].filename));
+
+  if (mediaRes.rows.length === 0) {
+    return { success: false, error: 'Media asset not found.' };
   }
 
+  const filename = String(mediaRes.rows[0].filename);
+
+  // 1. Delete from database first to ensure relational integrity
   await db.execute({ sql: 'DELETE FROM media WHERE id = ?', args: [id] });
+
+  // 2. Once database record is safely removed, delete file from S3 and local disk
+  if (filename) {
+    try {
+      await deleteMediaFile(filename);
+    } catch (cleanupErr) {
+      console.warn(`Warning: Could not remove storage object for "${filename}":`, cleanupErr);
+    }
+  }
+
   return { success: true };
 }

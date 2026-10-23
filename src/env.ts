@@ -42,12 +42,19 @@ const envSchema = z.object({
   NOMINATION_WEBHOOK_URL: z.string().url().optional(),
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
 
-  // S3 Cloud Storage
+  // AWS S3 Cloud Storage
   S3_ENABLED: z.enum(['true', 'false']).optional().default('false'),
+  AWS_REGION: z.string().optional(),
+  AWS_S3_BUCKET: z.string().optional(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+
+  // S3 Aliases & Compatibility Variables
   S3_BUCKET: z.string().optional(),
-  S3_REGION: z.string().optional().default('us-east-1'),
+  S3_REGION: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
   // Media Storage Directory (Render persistent disk)
   MEDIA_STORAGE_DIR: z.string().optional(),
 });

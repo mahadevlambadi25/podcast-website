@@ -29,8 +29,12 @@ Configure these environment variables in your Render Web Service dashboard:
 | `ADMIN_EMAIL` | Optional | Email for initial admin account bootstrapping on a fresh database. |
 | `ADMIN_PASSWORD` | Optional | Strong password for initial admin (min 8 chars, 1 letter, 1 number, 1 special char). |
 | `NOMINATION_RECIPIENT_EMAIL` | Optional | Recipient email for leader nomination notifications. |
-| `CONTACT_RECIPIENT_EMAIL` | Optional | Recipient email for contact form submissions. |
 | `RESEND_API_KEY` | Optional | API key for transactional emails via Resend. |
+| `AWS_REGION` | Optional (Production) | AWS region for S3 media storage (e.g., `ap-south-1`). |
+| `AWS_S3_BUCKET` | Optional (Production) | Private S3 bucket name (e.g., `podcast-media-mahadev-2026`). |
+| `AWS_ACCESS_KEY_ID` | Optional (Production) | AWS IAM Access Key ID for S3 operations. |
+| `AWS_SECRET_ACCESS_KEY` | Optional (Production) | AWS IAM Secret Access Key for S3 operations. |
+| `S3_ENABLED` | Optional | Set to `true` to explicitly enforce S3 uploads (or auto-detected when credentials provided). |
 
 ---
 
@@ -58,18 +62,31 @@ The migration runner in `scripts/migrate-postgres.mjs`:
 
 ---
 
-## 4. Media Library & Persistent Disk Storage
+## 4. Media Library & Storage Architecture
 
-Render containers have an ephemeral filesystem by default. To preserve uploaded media across redeploys:
+The platform supports a dual-tier media storage architecture:
 
+### 4.1 AWS S3 Media Storage (Production Default)
+- **Private S3 Bucket**: Objects remain completely private (`Block Public Access` enabled).
+- **Secure Streaming**: Media is served via `/media/[...filename]` route, which streams directly from S3 using server-side AWS credentials.
+- **Cache-Control**: `public, max-age=31536000, immutable` with HTTP 304 ETag validation.
+- **Local Cache Mirroring**: When media is uploaded or served, it can be mirrored to the local cache directory (`MEDIA_STORAGE_DIR`) for instant subsequent retrieval.
+
+To configure on Render:
+1. In the Web Service Environment Variables, add:
+   - `AWS_REGION`: `ap-south-1`
+   - `AWS_S3_BUCKET`: `podcast-media-mahadev-2026`
+   - `AWS_ACCESS_KEY_ID`: `<YOUR_IAM_ACCESS_KEY_ID>`
+   - `AWS_SECRET_ACCESS_KEY`: `<YOUR_IAM_SECRET_ACCESS_KEY>`
+   - `S3_ENABLED`: `true`
+
+### 4.2 Render Persistent Disk (Local Fallback & Dev)
+Render containers have an ephemeral filesystem by default. When S3 is not configured:
 1. In Render, go to your Web Service -> **Disks** -> **Add Disk**:
    - **Name**: `unchartered-media-uploads`
-   - **Mount Path**: `/app/media`
+   - **Mount Path**: `/var/data/media`
    - **Size**: 10 GB (or as required)
-2. The platform automatically serves files from `/app/media` via the route handler:
-   - Route: `/media/[...filename]`
-   - Cache-Control: `public, max-age=31536000, immutable`
-   - Supported Formats: JPEG, PNG, WebP, SVG, AVIF, MP3, WAV, M4A, MP4, WebM
+2. The platform automatically serves files from `/var/data/media` or local storage directories.
 
 ---
 

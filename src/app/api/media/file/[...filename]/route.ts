@@ -1,26 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findMediaFile } from '@/lib/storage';
-import fs from 'fs';
+import { resolveMediaFile, getMimeType } from '@/lib/storage';
 import path from 'path';
 
-const MIME_MAP: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.avif': 'image/avif',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.m4a': 'audio/x-m4a',
-  '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
-  '.pdf': 'application/pdf',
-};
-
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ filename: string[] }> }
 ) {
   try {
@@ -31,23 +14,36 @@ export async function GET(
 
     const requestedName = filename.join('/');
     const safeName = path.basename(requestedName);
-    const filePath = findMediaFile(safeName);
+    const resolved = await resolveMediaFile(safeName);
 
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (!resolved) {
       return NextResponse.json({ error: 'Media file not found' }, { status: 404 });
     }
 
-    const ext = path.extname(safeName).toLowerCase();
-    const contentType = MIME_MAP[ext] || 'application/octet-stream';
-    const fileBuffer = fs.readFileSync(filePath);
+    const clientEtag = req.headers.get('if-none-match');
+    if (resolved.etag && clientEtag && clientEtag === resolved.etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': resolved.etag,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
 
-    return new NextResponse(fileBuffer, {
+    const headers: Record<string, string> = {
+      'Content-Type': resolved.contentType || getMimeType(safeName),
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Content-Length': String(resolved.contentLength),
+    };
+
+    if (resolved.etag) {
+      headers['ETag'] = resolved.etag;
+    }
+
+    return new NextResponse(new Uint8Array(resolved.buffer), {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Length': String(fileBuffer.length),
-      },
+      headers,
     });
   } catch (err: any) {
     console.error('Error serving legacy api media file:', err);
