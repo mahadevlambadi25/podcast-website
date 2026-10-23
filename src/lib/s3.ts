@@ -18,31 +18,47 @@ export interface S3Config {
 }
 
 /**
+ * Sanitizes and normalizes an environment variable value.
+ * Trims whitespace and strips surrounding matching quotes (single or double).
+ */
+export function cleanEnvValue(val?: string | null): string | undefined {
+  if (val === undefined || val === null) return undefined;
+  let trimmed = String(val).trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
  * Returns the effective S3 configuration from environment variables.
  * Prioritizes standard AWS_* variables while supporting S3_* aliases.
  */
 export function getS3Config(): S3Config {
   const bucket =
-    process.env.AWS_S3_BUCKET ||
-    process.env.S3_BUCKET ||
+    cleanEnvValue(process.env.AWS_S3_BUCKET) ||
+    cleanEnvValue(process.env.S3_BUCKET) ||
     'podcast-media-mahadev-2026';
 
   const region =
-    process.env.AWS_REGION ||
-    process.env.S3_REGION ||
+    cleanEnvValue(process.env.AWS_REGION) ||
+    cleanEnvValue(process.env.S3_REGION) ||
     'ap-south-1';
 
   const accessKeyId =
-    process.env.AWS_ACCESS_KEY_ID ||
-    process.env.S3_ACCESS_KEY_ID ||
+    cleanEnvValue(process.env.AWS_ACCESS_KEY_ID) ||
+    cleanEnvValue(process.env.S3_ACCESS_KEY_ID) ||
     undefined;
 
   const secretAccessKey =
-    process.env.AWS_SECRET_ACCESS_KEY ||
-    process.env.S3_SECRET_ACCESS_KEY ||
+    cleanEnvValue(process.env.AWS_SECRET_ACCESS_KEY) ||
+    cleanEnvValue(process.env.S3_SECRET_ACCESS_KEY) ||
     undefined;
 
-  const endpoint = process.env.S3_ENDPOINT || undefined;
+  const endpoint = cleanEnvValue(process.env.S3_ENDPOINT) || undefined;
 
   return {
     bucket,
@@ -59,22 +75,35 @@ export function getS3Config(): S3Config {
  */
 export function isS3Configured(): boolean {
   const config = getS3Config();
-  return Boolean(config.bucket && config.accessKeyId && config.secretAccessKey);
+  return Boolean(
+    config.bucket &&
+    config.accessKeyId &&
+    config.secretAccessKey &&
+    config.accessKeyId.length > 0 &&
+    config.secretAccessKey.length > 0
+  );
 }
 
 /**
  * Determines if S3 storage should be actively used for media operations.
- * - If S3_ENABLED is explicitly set to 'false', S3 is disabled.
- * - If S3_ENABLED is 'true', S3 is required and enabled.
- * - If S3_ENABLED is not set, S3 is enabled when credentials are fully configured.
+ * - Handles surrounding quotes, whitespace, casing, and truthy/falsy representations.
+ * - If S3_ENABLED is 'false', '0', 'no', 'off', S3 is disabled.
+ * - If S3_ENABLED is 'true', '1', 'yes', 'on', S3 is enabled.
+ * - If S3_ENABLED is not set, S3 is automatically enabled whenever credentials and bucket are present.
  */
 export function isS3Enabled(): boolean {
-  if (process.env.S3_ENABLED === 'false') {
-    return false;
+  const rawEnabled = cleanEnvValue(process.env.S3_ENABLED);
+
+  if (rawEnabled !== undefined) {
+    const lower = rawEnabled.toLowerCase();
+    if (lower === 'false' || lower === '0' || lower === 'no' || lower === 'off') {
+      return false;
+    }
+    if (lower === 'true' || lower === '1' || lower === 'yes' || lower === 'on') {
+      return true;
+    }
   }
-  if (process.env.S3_ENABLED === 'true') {
-    return true;
-  }
+
   return isS3Configured();
 }
 

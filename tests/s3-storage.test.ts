@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import {
   getS3Config,
   isS3Configured,
@@ -99,9 +101,41 @@ describe('AWS S3 Media Storage Integration Suite', () => {
       expect(isS3Enabled()).toBe(false);
     });
 
-    it('respects explicit S3_ENABLED="true"', () => {
+    it('respects explicit S3_ENABLED="true" with various formats and surrounding quotes', () => {
       process.env.AWS_S3_BUCKET = 'podcast-media-mahadev-2026';
-      process.env.S3_ENABLED = 'true';
+      process.env.AWS_ACCESS_KEY_ID = '"AKIA_TEST_QUOTED"';
+      process.env.AWS_SECRET_ACCESS_KEY = "'SECRET_TEST_QUOTED'";
+      process.env.S3_ENABLED = '"true"';
+
+      const config = getS3Config();
+      expect(config.accessKeyId).toBe('AKIA_TEST_QUOTED');
+      expect(config.secretAccessKey).toBe('SECRET_TEST_QUOTED');
+      expect(isS3Enabled()).toBe(true);
+
+      // Other truthy representations
+      process.env.S3_ENABLED = '1';
+      expect(isS3Enabled()).toBe(true);
+      process.env.S3_ENABLED = 'yes';
+      expect(isS3Enabled()).toBe(true);
+      process.env.S3_ENABLED = 'TRUE';
+      expect(isS3Enabled()).toBe(true);
+
+      // Falsy representations
+      process.env.S3_ENABLED = '0';
+      expect(isS3Enabled()).toBe(false);
+      process.env.S3_ENABLED = 'no';
+      expect(isS3Enabled()).toBe(false);
+      process.env.S3_ENABLED = '"false"';
+      expect(isS3Enabled()).toBe(false);
+    });
+
+    it('auto-enables S3 when credentials are fully configured and S3_ENABLED is unset', () => {
+      delete process.env.S3_ENABLED;
+      process.env.AWS_S3_BUCKET = 'podcast-media-mahadev-2026';
+      process.env.AWS_ACCESS_KEY_ID = 'AKIA_AUTO_DETECT';
+      process.env.AWS_SECRET_ACCESS_KEY = 'SECRET_AUTO_DETECT';
+
+      expect(isS3Configured()).toBe(true);
       expect(isS3Enabled()).toBe(true);
     });
   });
@@ -195,6 +229,30 @@ describe('AWS S3 Media Storage Integration Suite', () => {
 
       const buffer = Buffer.from('data-should-fail');
       await expect(saveMediaFile(buffer, 'network-fail.jpg', 'image/jpeg')).rejects.toThrow();
+    });
+
+    it('saveMediaFile streams to S3 and never writes to public/media when S3 is enabled', async () => {
+      vi.spyOn(S3Client.prototype, 'send').mockImplementation(async (command: any) => {
+        if (command instanceof PutObjectCommand) {
+          return { ETag: '"etag-saved-direct"' } as any;
+        }
+        return {} as any;
+      });
+
+      const writeFileSyncSpy = vi.spyOn(fs, 'writeFileSync');
+
+      const buffer = Buffer.from('video-mp4-data');
+      const res = await saveMediaFile(buffer, 'test-scene.mp4', 'video/mp4');
+
+      expect(res.filename).toBe('test-scene.mp4');
+      expect(res.s3Key).toBe('test-scene.mp4');
+
+      // Assert that writeFileSync was never called for public/media
+      const calls = writeFileSyncSpy.mock.calls;
+      const wroteToPublicMedia = calls.some(([filePath]) =>
+        typeof filePath === 'string' && filePath.includes(path.join('public', 'media'))
+      );
+      expect(wroteToPublicMedia).toBe(false);
     });
   });
 

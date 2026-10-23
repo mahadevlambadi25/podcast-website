@@ -106,8 +106,11 @@ export function getMediaSearchDirs(): string[] {
 
 /**
  * Saves a media file buffer to storage.
- * If S3 is enabled, uploads to S3 bucket and best-effort mirrors to local disk cache.
- * If S3 is not enabled, writes to the primary local disk directory.
+ * - When S3 is enabled: Uploads directly to AWS S3 first! Does not attempt to write to public/media.
+ *   Only after S3 succeeds, best-effort mirrors to persistent disk (/var/data/media) if available.
+ *   If S3 fails, throws immediately (never silently falls back to local disk).
+ * - When S3 is not enabled: Writes to primary local storage directory (/var/data/media or media/).
+ *   In non-production development environments, best-effort mirrors to public/media if writable.
  */
 export async function saveMediaFile(
   buffer: Buffer,
@@ -115,34 +118,8 @@ export async function saveMediaFile(
   contentType?: string
 ): Promise<{ filename: string; filePath: string; s3Key?: string; s3Bucket?: string }> {
   const sanitizedFilename = path.basename(filename);
-  let targetPath = '';
 
-  // Write to local disk cache (best-effort)
-  try {
-    const primaryDir = getPrimaryMediaDir();
-    if (!fs.existsSync(primaryDir)) {
-      fs.mkdirSync(primaryDir, { recursive: true });
-    }
-    targetPath = path.join(primaryDir, sanitizedFilename);
-    fs.writeFileSync(targetPath, buffer);
-
-    // In development or local testing, also mirror to public/media
-    const publicMediaDir = path.resolve(process.cwd(), 'public', 'media');
-    if (!fs.existsSync(publicMediaDir)) {
-      fs.mkdirSync(publicMediaDir, { recursive: true });
-    }
-    const publicTargetPath = path.join(publicMediaDir, sanitizedFilename);
-    if (publicTargetPath !== targetPath) {
-      fs.writeFileSync(publicTargetPath, buffer);
-    }
-  } catch (diskErr) {
-    // If running in container or cloud without writable local disk, non-fatal if S3 is active
-    if (!isS3Enabled()) {
-      throw diskErr;
-    }
-  }
-
-  // If S3 is enabled, upload to S3 (strict: throw if S3 fails)
+  // 1. S3-ENABLED PATH: Upload directly to private AWS S3 bucket
   if (isS3Enabled()) {
     const mime = contentType || getMimeType(sanitizedFilename);
     const s3Result = await uploadObjectToS3({
@@ -151,12 +128,52 @@ export async function saveMediaFile(
       contentType: mime,
     });
 
+    // Best-effort local persistent disk cache ONLY if a dedicated persistent directory exists
+    // (Never write to /app/public/media in production)
+    let localCachePath = '';
+    try {
+      if (process.env.MEDIA_STORAGE_DIR || fs.existsSync('/var/data/media')) {
+        const primaryDir = getPrimaryMediaDir();
+        if (fs.existsSync(primaryDir)) {
+          const cachePath = path.join(primaryDir, sanitizedFilename);
+          fs.writeFileSync(cachePath, buffer);
+          localCachePath = cachePath;
+        }
+      }
+    } catch {
+      // Local caching failure is non-fatal: S3 is already the durable source of truth
+    }
+
     return {
       filename: sanitizedFilename,
-      filePath: targetPath,
+      filePath: localCachePath || s3Result.key,
       s3Key: s3Result.key,
       s3Bucket: s3Result.bucket,
     };
+  }
+
+  // 2. LOCAL-ONLY PATH: S3 is not enabled, store in primary local disk directory
+  const primaryDir = getPrimaryMediaDir();
+  if (!fs.existsSync(primaryDir)) {
+    fs.mkdirSync(primaryDir, { recursive: true });
+  }
+  const targetPath = path.join(primaryDir, sanitizedFilename);
+  fs.writeFileSync(targetPath, buffer);
+
+  // In local development only (NODE_ENV !== 'production'), optionally mirror to public/media if writable
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const publicMediaDir = path.resolve(process.cwd(), 'public', 'media');
+      if (!fs.existsSync(publicMediaDir)) {
+        fs.mkdirSync(publicMediaDir, { recursive: true });
+      }
+      const publicTargetPath = path.join(publicMediaDir, sanitizedFilename);
+      if (publicTargetPath !== targetPath) {
+        fs.writeFileSync(publicTargetPath, buffer);
+      }
+    } catch {
+      // Non-fatal if public/media is not writable
+    }
   }
 
   return { filename: sanitizedFilename, filePath: targetPath };
@@ -229,12 +246,16 @@ export async function resolveMediaFile(filename: string): Promise<{
         const contentType = s3Object.contentType || getMimeType(cleanName);
         const contentLength = s3Object.contentLength || s3Object.buffer.length;
 
-        // Asynchronously mirror to local disk cache for instant subsequent reads
+        // Asynchronously mirror to local disk cache for instant subsequent reads (if persistent disk is mounted)
         try {
-          const primaryDir = getPrimaryMediaDir();
-          const targetPath = path.join(primaryDir, cleanName);
-          if (!fs.existsSync(targetPath)) {
-            fs.writeFileSync(targetPath, s3Object.buffer);
+          if (process.env.MEDIA_STORAGE_DIR || fs.existsSync('/var/data/media')) {
+            const primaryDir = getPrimaryMediaDir();
+            if (fs.existsSync(primaryDir)) {
+              const targetPath = path.join(primaryDir, cleanName);
+              if (!fs.existsSync(targetPath)) {
+                fs.writeFileSync(targetPath, s3Object.buffer);
+              }
+            }
           }
         } catch {
           // Non-fatal cache write failure

@@ -43,7 +43,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().optional(),
 
   // AWS S3 Cloud Storage
-  S3_ENABLED: z.enum(['true', 'false']).optional().default('false'),
+  S3_ENABLED: z.string().optional(),
   AWS_REGION: z.string().optional(),
   AWS_S3_BUCKET: z.string().optional(),
   AWS_ACCESS_KEY_ID: z.string().optional(),
