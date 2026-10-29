@@ -14,6 +14,17 @@ export default function AdminLoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // If already authenticated, redirect to admin dashboard
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => {
+        if (res.ok) {
+          window.location.href = '/admin';
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Ensure fields are reset to empty on initial mount and page reload
   useEffect(() => {
     setEmail('');
@@ -49,8 +60,12 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Successful login
-      window.location.href = '/admin';
+      // Successful login: redirect to destination or default to /admin
+      const params = new URLSearchParams(window.location.search);
+      const redirectParam = params.get('redirect');
+      const destination =
+        redirectParam && redirectParam.startsWith('/admin') ? redirectParam : '/admin';
+      window.location.href = destination;
     } catch (err: any) {
       setErrorMessage('An unexpected network error occurred. Please try again.');
       setIsLoading(false);

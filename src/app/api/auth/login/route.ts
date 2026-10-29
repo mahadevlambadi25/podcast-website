@@ -96,12 +96,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Set secure cookie
+    const forwardedProto = req.headers.get('x-forwarded-proto');
+    const isHttps =
+      forwardedProto?.split(',')[0].trim().toLowerCase() === 'https' ||
+      req.nextUrl.protocol === 'https:';
+
+    // Set secure cookie - uses Secure flag whenever accessed over HTTPS or behind an HTTPS proxy
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60,

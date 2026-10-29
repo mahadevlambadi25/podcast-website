@@ -70,7 +70,8 @@ export function verifySessionToken(token: string): SessionPayload | null {
     }
 
     return payload;
-  } catch {
+  } catch (err) {
+    console.error('getCurrentUser error:', err);
     return null;
   }
 }
@@ -107,7 +108,8 @@ export async function getCurrentUser(): Promise<{
       email: String(user.email),
       role: (user.role as 'admin' | 'editor') || 'editor',
     };
-  } catch {
+  } catch (err) {
+    console.error('getCurrentUser error:', err);
     return null;
   }
 }
