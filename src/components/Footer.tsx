@@ -26,8 +26,8 @@ export function Footer({ socialsOverride }: FooterProps) {
             <Link href="/" className="inline-flex items-center" aria-label={`${siteConfig.brandName} - Home`}>
               <BrandLockup
                 gapClassName="gap-2.5 sm:gap-3"
-                iconClassName="h-9 w-9 sm:h-10 sm:w-10"
-                wordmarkClassName="h-9 sm:h-10"
+                iconClassName="h-8 w-8 sm:h-[34px] sm:w-[34px]"
+                wordmarkClassName="h-8 sm:h-[34px]"
               />
             </Link>
             <p className="text-sm text-[#8E9CAE] max-w-md leading-relaxed">
