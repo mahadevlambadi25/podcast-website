@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { normalizeIsoTimestamp, toUtcIsoString } from '../src/lib/date';
 import { db } from '../src/lib/db/client';
 import { createMedia } from '../src/services/media.service';
@@ -104,7 +104,27 @@ describe('Media Service Schema & Upload Integrity', () => {
   });
 });
 
+/**
+ * The services run their queries inside db.transaction(tx => tx.execute(...)).
+ * When a database is configured (as in CI), the real transaction would bypass
+ * the db.execute mocks below and hit Postgres. Route the transaction through
+ * db.execute so these stay pure unit tests, matching the no-pool test path
+ * in DatabaseClient.transaction.
+ */
+function routeTransactionsThroughExecute() {
+  beforeEach(() => {
+    vi.spyOn(db, 'transaction').mockImplementation(async (callback: any) =>
+      callback({ execute: (input: any) => db.execute(input) })
+    );
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+}
+
 describe('Guest Service Schema Resiliency', () => {
+  routeTransactionsThroughExecute();
+
   it('creates guest using biography and bio with fallback if biography column is missing', async () => {
     let callCount = 0;
     const executedQueries: string[] = [];
@@ -172,6 +192,8 @@ describe('Guest Service Schema Resiliency', () => {
 });
 
 describe('Episode Service Publishing & Scheduling Dates', () => {
+  routeTransactionsThroughExecute();
+
   it('normalizes local GMT timestamps to UTC ISO strings when saving episode', async () => {
     let capturedArgs: any[] = [];
 

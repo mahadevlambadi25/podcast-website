@@ -26,10 +26,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    # Throwaway values for the disposable CI database only — not production credentials.
     env:
       NODE_ENV: test
-      PAYLOAD_SECRET: a-very-secure-payload-secret-for-ci-tests-at-least-32-chars-long
-      DATABASE_URI: postgresql://postgres:postgrespassword@localhost:5432/unchartered_test
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/unchartered_test
+      SESSION_SECRET: ci-only-session-secret-not-used-in-production-0123456789abcdef
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       CRON_SECRET: super-secure-cron-token-ci-32-chars
       SEED_ADMIN_EMAIL: admin@ci-unchartered.com
@@ -54,6 +55,9 @@ jobs:
       - name: Next.js Linter
         run: npm run lint
 
+      - name: Apply Database Migrations
+        run: node ./scripts/migrate-postgres.mjs
+
       - name: Run Unit & Integration Tests (Vitest)
         run: npm run test
 
@@ -61,10 +65,6 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          DATABASE_URI: postgresql://postgres:postgrespassword@localhost:5432/unchartered_test
-          PAYLOAD_SECRET: a-very-secure-payload-secret-for-ci-tests-at-least-32-chars-long
-          CRON_SECRET: super-secure-cron-token-ci-32-chars
-          NEXT_PUBLIC_SITE_URL: http://localhost:3000
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
