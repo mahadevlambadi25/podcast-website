@@ -51,13 +51,13 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                 alt={brandAlt}
                 priority
                 gapClassName="gap-2 sm:gap-2.5 lg:gap-3"
-                iconClassName="h-6 w-6 min-[360px]:h-7 min-[360px]:w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
-                wordmarkClassName="h-6 min-[360px]:h-7 sm:h-8 lg:h-10 xl:h-[42px]"
+                iconClassName="h-6 w-6 min-[360px]:h-7 min-[360px]:w-7 sm:h-8 sm:w-8 md:h-7 md:w-7 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
+                wordmarkClassName="h-6 min-[360px]:h-7 sm:h-8 md:h-7 lg:h-10 xl:h-[42px]"
               />
             </Link>
 
             {/* Publisher Attribution Badge */}
-            <div className="hidden lg:flex items-center gap-1.5 pl-3 border-l border-white/15 text-xs text-[#8E9CAE]">
+            <div className="hidden xl:flex items-center gap-1.5 pl-3 border-l border-white/15 text-xs text-[#8E9CAE]">
               <span>by</span>
               <a
                 href={siteConfig.publisher.url}
@@ -72,12 +72,12 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           </div>
 
           {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-sm lg:max-w-md mx-4">
+          <div className="hidden md:flex flex-1 min-w-0 max-w-sm lg:max-w-md mx-1 lg:mx-4">
             <SearchBar isHeader placeholder="Search guests, episodes, topics..." />
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5 lg:gap-2">
+          <nav className="hidden md:flex items-center shrink-0 gap-1 lg:gap-2">
             {siteConfig.nav.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
               const isNominate = item.href === '/nominate-a-leader';
@@ -88,7 +88,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                     key={item.href}
                     href={item.href}
                     prefetch={true}
-                    className="ml-2 px-4 py-2 rounded-xl neu-btn-gold text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="ml-1 lg:ml-2 px-3 lg:px-4 py-2 rounded-xl neu-btn-gold whitespace-nowrap text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {item.label}
                   </Link>
@@ -100,7 +100,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                   key={item.href}
                   href={item.href}
                   prefetch={true}
-                  className={`px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all ${
+                  className={`px-2.5 lg:px-3.5 py-2 rounded-xl whitespace-nowrap text-xs uppercase tracking-wider font-semibold transition-all ${
                     isActive
                       ? 'bg-white/10 text-[#C6A15B] font-bold border border-[#C6A15B]/30'
                       : 'text-[#DFE3E8] hover:text-white hover:bg-white/5'
