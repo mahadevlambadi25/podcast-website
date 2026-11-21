@@ -73,7 +73,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           </div>
 
           {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 min-w-0 max-w-sm lg:max-w-md mx-1 lg:mx-4">
+          <div className="hidden md:flex flex-1 min-w-0 max-w-sm lg:max-w-md ml-1 mr-3 lg:mx-4">
             <SearchBar isHeader placeholder="Search guests, episodes, topics..." />
           </div>
 
