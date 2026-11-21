@@ -14,8 +14,8 @@ const LOCKUP_SIZES = {
   sm: { icon: 'h-6 w-6', wordmark: 'h-[22px]', gap: 'gap-2' },
   // ~30 + 8 + 138px — admin sidebar (264px wide, next to the collapse button)
   md: { icon: 'h-[30px] w-[30px]', wordmark: 'h-[22px]', gap: 'gap-2' },
-  // ~36 + 10 + 225px on phones, ~44 + 12 + 275px from 640px — admin login
-  lg: { icon: 'h-9 w-9 sm:h-11 sm:w-11', wordmark: 'h-9 sm:h-11', gap: 'gap-2.5 sm:gap-3' },
+  // ~32 + 10 + 200px on phones, ~38 + 12 + 225px from 640px — admin login
+  lg: { icon: 'h-8 w-8 sm:h-[38px] sm:w-[38px]', wordmark: 'h-8 sm:h-9', gap: 'gap-2.5 sm:gap-3' },
   xl: { icon: 'h-14 w-14', wordmark: 'h-14', gap: 'gap-3' },
 } as const;
 const ICON_SIZE = { sm: 24, md: 36, lg: 44, xl: 56 } as const;

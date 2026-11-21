@@ -89,8 +89,8 @@ export default async function AdminDashboardPage() {
                 decorative
                 priority
                 gapClassName="gap-2.5 lg:gap-3"
-                iconClassName="h-9 w-9 sm:h-10 sm:w-10 lg:h-11 lg:w-11"
-                wordmarkClassName="h-9 sm:h-10 lg:h-11"
+                iconClassName="h-8 w-8 sm:h-[34px] sm:w-[34px] lg:h-[38px] lg:w-[38px]"
+                wordmarkClassName="h-8 sm:h-[34px] lg:h-9"
               />
             </h1>
             <p className="mt-1 text-sm text-slate-300 max-w-xl">
