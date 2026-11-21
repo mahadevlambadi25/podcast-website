@@ -46,14 +46,14 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
             >
               {/* Gold buildings icon + wordmark (uploaded Settings logo replaces the wordmark).
                   Phones 22→26→28px icon / 138→163→175px wordmark; 640px 32/200;
-                  tablet 24/150; 1024px 34/213; 1280px+ 38/225 */}
+                  tablet 24/150; 1024px 30/188; 1280px+ 34/200 */}
               <BrandLockup
                 wordmarkSrc={customLogoUrl}
                 alt={brandAlt}
                 priority
                 gapClassName="gap-1.5 min-[360px]:gap-2 sm:gap-2.5 md:gap-2 lg:gap-3"
-                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-6 md:w-6 lg:h-[34px] lg:w-[34px] xl:h-[38px] xl:w-[38px]"
-                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-6 lg:h-[34px] xl:h-9"
+                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-6 md:w-6 lg:h-[30px] lg:w-[30px] xl:h-[34px] xl:w-[34px]"
+                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-6 lg:h-[30px] xl:h-8"
               />
             </Link>
 
