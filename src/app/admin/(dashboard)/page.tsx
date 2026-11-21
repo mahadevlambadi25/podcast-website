@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getDashboardMetrics } from '@/services/metrics.service';
 import { Badge } from '@/components/ui/badge';
-import { BrandWordmark } from '@/components/brand/BrandWordmark';
+import { BrandLockup } from '@/components/brand/BrandWordmark';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -85,7 +85,13 @@ export default async function AdminDashboardPage() {
             </div>
             <h1 className="flex mb-2">
               <span className="sr-only">Unchartered — Legends & Legacies</span>
-              <BrandWordmark decorative priority className="h-9 sm:h-10 lg:h-11" />
+              <BrandLockup
+                decorative
+                priority
+                gapClassName="gap-2.5 lg:gap-3"
+                iconClassName="h-9 w-9 sm:h-10 sm:w-10 lg:h-11 lg:w-11"
+                wordmarkClassName="h-9 sm:h-10 lg:h-11"
+              />
             </h1>
             <p className="mt-1 text-sm text-slate-300 max-w-xl">
               Curate executive leadership interviews, manage guest profiles, schedule broadcast releases, and review audience submissions.

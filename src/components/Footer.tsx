@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { PrivacySettingsButton } from './PrivacySettingsButton';
-import { BrandWordmark } from './brand/BrandWordmark';
+import { BrandLockup } from './brand/BrandWordmark';
 
 interface FooterProps {
   socialsOverride?: {
@@ -24,7 +24,11 @@ export function Footer({ socialsOverride }: FooterProps) {
           {/* Brand Column */}
           <div data-reveal data-reveal-delay="1" className="md:col-span-2 space-y-4">
             <Link href="/" className="inline-flex items-center" aria-label={`${siteConfig.brandName} - Home`}>
-              <BrandWordmark className="h-9 sm:h-10" />
+              <BrandLockup
+                gapClassName="gap-2.5 sm:gap-3"
+                iconClassName="h-9 w-9 sm:h-10 sm:w-10"
+                wordmarkClassName="h-9 sm:h-10"
+              />
             </Link>
             <p className="text-sm text-[#8E9CAE] max-w-md leading-relaxed">
               {siteConfig.tagline}

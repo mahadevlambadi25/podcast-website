@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, Search } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { SearchBar } from './SearchBar';
-import { BrandWordmark } from './brand/BrandWordmark';
+import { BrandLockup } from './brand/BrandWordmark';
 
 interface HeaderProps {
   customLogoUrl?: string | null;
@@ -44,15 +44,16 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
               className="flex items-center gap-3 group focus:outline-none"
               aria-label={`${siteConfig.brandName} - Home`}
             >
-              {/* Gold wordmark (uploaded Settings logo takes precedence); ~200px mobile → ~263px desktop */}
-              <span className="flex items-center max-w-[58vw] sm:max-w-none">
-                <BrandWordmark
-                  src={customLogoUrl}
-                  alt={brandAlt}
-                  priority
-                  className="h-8 sm:h-9 lg:h-10 xl:h-[42px]"
-                />
-              </span>
+              {/* Gold buildings icon + wordmark (uploaded Settings logo replaces the wordmark).
+                  Icon 24→28→32→40→44px, wordmark 150→175→200→250→263px wide */}
+              <BrandLockup
+                wordmarkSrc={customLogoUrl}
+                alt={brandAlt}
+                priority
+                gapClassName="gap-2 sm:gap-2.5 lg:gap-3"
+                iconClassName="h-6 w-6 min-[360px]:h-7 min-[360px]:w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
+                wordmarkClassName="h-6 min-[360px]:h-7 sm:h-8 lg:h-10 xl:h-[42px]"
+              />
             </Link>
 
             {/* Publisher Attribution Badge */}

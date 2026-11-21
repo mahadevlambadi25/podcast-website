@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { BrandWordmark, BRAND_ICON_SRC } from '@/components/brand/BrandWordmark';
+import { BrandLockup, BRAND_ICON_SRC } from '@/components/brand/BrandWordmark';
 
 interface BrandLogoProps {
   collapsed?: boolean;
@@ -8,12 +8,15 @@ interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-// Wordmark heights; width follows the 6.25:1 aspect ratio
-const WORDMARK_HEIGHT_CLASS = {
-  sm: 'h-[22px]', // ~138px wide
-  md: 'h-[26px]', // ~163px wide — admin sidebar
-  lg: 'h-11', //     ~275px wide — admin login
-  xl: 'h-14', //     ~350px wide
+// Icon + wordmark sizes; wordmark width follows its 6.25:1 aspect ratio
+const LOCKUP_SIZES = {
+  // ~24 + 8 + 138px
+  sm: { icon: 'h-6 w-6', wordmark: 'h-[22px]', gap: 'gap-2' },
+  // ~30 + 8 + 138px — admin sidebar (264px wide, next to the collapse button)
+  md: { icon: 'h-[30px] w-[30px]', wordmark: 'h-[22px]', gap: 'gap-2' },
+  // ~36 + 10 + 225px on phones, ~44 + 12 + 275px from 640px — admin login
+  lg: { icon: 'h-9 w-9 sm:h-11 sm:w-11', wordmark: 'h-9 sm:h-11', gap: 'gap-2.5 sm:gap-3' },
+  xl: { icon: 'h-14 w-14', wordmark: 'h-14', gap: 'gap-3' },
 } as const;
 const ICON_SIZE = { sm: 24, md: 36, lg: 44, xl: 56 } as const;
 
@@ -23,7 +26,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
 }) => {
   if (collapsed) {
-    // The full wordmark doesn't fit the collapsed sidebar, so show the gold buildings icon
+    // The full lockup doesn't fit the collapsed sidebar, so show the gold buildings icon only
     const iconSize = ICON_SIZE[size];
     return (
       <div className={`flex items-center select-none ${className}`}>
@@ -42,13 +45,21 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     );
   }
 
+  const s = LOCKUP_SIZES[size];
   return (
-    <div className={`flex flex-col items-center leading-none select-none ${className}`}>
-      <BrandWordmark key="brand-wordmark" priority className={WORDMARK_HEIGHT_CLASS[size]} />
-      <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px]">
-        Editorial Portal
-      </span>
-    </div>
+    <BrandLockup
+      key="brand-lockup"
+      priority
+      className={`select-none ${className}`}
+      gapClassName={s.gap}
+      iconClassName={s.icon}
+      wordmarkClassName={s.wordmark}
+      wordmarkCaption={
+        <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px]">
+          Editorial Portal
+        </span>
+      }
+    />
   );
 };
 
