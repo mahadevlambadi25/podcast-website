@@ -83,7 +83,7 @@ export default async function AdminDashboardPage() {
               <Sparkles className="w-3.5 h-3.5" />
               <span>Editorial Command Center</span>
             </div>
-            <h1 className="flex">
+            <h1 className="flex mb-2">
               <span className="sr-only">Unchartered — Legends & Legacies</span>
               <BrandWordmark decorative priority className="h-9 sm:h-10 lg:h-11" />
             </h1>
