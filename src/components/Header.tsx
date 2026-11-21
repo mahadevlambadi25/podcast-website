@@ -45,14 +45,15 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
               aria-label={`${siteConfig.brandName} - Home`}
             >
               {/* Gold buildings icon + wordmark (uploaded Settings logo replaces the wordmark).
-                  Icon 24→28→32→40→44px, wordmark 150→175→200→250→263px wide */}
+                  Phones 22→26→28px icon / 138→163→175px wordmark; 640px 32/200;
+                  tablet 28/175; 1024px 40/250; 1280px+ 44/263 */}
               <BrandLockup
                 wordmarkSrc={customLogoUrl}
                 alt={brandAlt}
                 priority
-                gapClassName="gap-2 sm:gap-2.5 lg:gap-3"
-                iconClassName="h-6 w-6 min-[360px]:h-7 min-[360px]:w-7 sm:h-8 sm:w-8 md:h-7 md:w-7 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
-                wordmarkClassName="h-6 min-[360px]:h-7 sm:h-8 md:h-7 lg:h-10 xl:h-[42px]"
+                gapClassName="gap-1.5 min-[360px]:gap-2 sm:gap-2.5 lg:gap-3"
+                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-7 md:w-7 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
+                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-7 lg:h-10 xl:h-[42px]"
               />
             </Link>
 
