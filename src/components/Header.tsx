@@ -46,14 +46,14 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
             >
               {/* Gold buildings icon + wordmark (uploaded Settings logo replaces the wordmark).
                   Phones 22→26→28px icon / 138→163→175px wordmark; 640px 32/200;
-                  tablet 28/175; 1024px 40/250; 1280px+ 44/263 */}
+                  tablet 24/150; 1024px 40/250; 1280px+ 44/263 */}
               <BrandLockup
                 wordmarkSrc={customLogoUrl}
                 alt={brandAlt}
                 priority
-                gapClassName="gap-1.5 min-[360px]:gap-2 sm:gap-2.5 lg:gap-3"
-                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-7 md:w-7 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
-                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-7 lg:h-10 xl:h-[42px]"
+                gapClassName="gap-1.5 min-[360px]:gap-2 sm:gap-2.5 md:gap-2 lg:gap-3"
+                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-6 md:w-6 lg:h-10 lg:w-10 xl:h-11 xl:w-11"
+                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-6 lg:h-10 xl:h-[42px]"
               />
             </Link>
 
@@ -73,7 +73,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           </div>
 
           {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 min-w-0 max-w-sm lg:max-w-md ml-1 mr-3 lg:mx-4">
+          <div className="hidden md:flex flex-1 min-w-[88px] max-w-sm lg:max-w-md ml-1 mr-3 lg:mx-4">
             <SearchBar isHeader placeholder="Search guests, episodes, topics..." />
           </div>
 
@@ -101,7 +101,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                   key={item.href}
                   href={item.href}
                   prefetch={true}
-                  className={`px-2.5 lg:px-3.5 py-2 rounded-xl whitespace-nowrap text-xs uppercase tracking-wider font-semibold transition-all ${
+                  className={`px-2 lg:px-3.5 py-2 rounded-xl whitespace-nowrap text-xs uppercase tracking-wider font-semibold transition-all ${
                     isActive
                       ? 'bg-white/10 text-[#C6A15B] font-bold border border-[#C6A15B]/30'
                       : 'text-[#DFE3E8] hover:text-white hover:bg-white/5'
