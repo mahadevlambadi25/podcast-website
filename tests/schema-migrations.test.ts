@@ -60,8 +60,16 @@ describe('Database Schema & Migration Parity Audit', () => {
 describe('Media Storage & Resolution', () => {
   it('finds existing media files in storage directories', async () => {
     const { findMediaFile } = await import('../src/lib/storage');
-    // Test that the placeholder file can be located
-    const file = findMediaFile('portrait-placeholder.svg');
-    expect(file).not.toBeNull();
+    // Use the committed fixture directory (the real /media folder is git-ignored and absent in CI)
+    const previous = process.env.MEDIA_STORAGE_DIR;
+    process.env.MEDIA_STORAGE_DIR = path.resolve(__dirname, 'fixtures', 'media');
+    try {
+      // Test that the placeholder file can be located
+      const file = findMediaFile('portrait-placeholder.svg');
+      expect(file).not.toBeNull();
+    } finally {
+      if (previous === undefined) delete process.env.MEDIA_STORAGE_DIR;
+      else process.env.MEDIA_STORAGE_DIR = previous;
+    }
   });
 });
