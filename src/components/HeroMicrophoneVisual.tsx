@@ -1,5 +1,6 @@
 import React from 'react';
 import { Radio, Sparkles, Volume2, Mic } from 'lucide-react';
+import { BRAND_ICON_SRC } from './brand/BrandWordmark';
 
 export function HeroMicrophoneVisual() {
   return (
@@ -212,19 +213,9 @@ export function HeroMicrophoneVisual() {
             fill="none"
           />
 
-          {/* Unchartered 'U' Editorial Emblem on Microphone Chassis */}
+          {/* Unchartered gold-buildings emblem on Microphone Chassis */}
           <circle cx="200" cy="256" r="14" fill="#0E1722" stroke="url(#goldGradient)" strokeWidth="1.5" />
-          <text
-            x="200"
-            y="262"
-            textAnchor="middle"
-            fill="#DFBF7C"
-            fontSize="14"
-            fontFamily="serif"
-            fontWeight="bold"
-          >
-            U
-          </text>
+          <image href={BRAND_ICON_SRC} x="189" y="245" width="22" height="22" preserveAspectRatio="xMidYMid meet" />
 
           {/* Status Indicator LED (Warm Gold) */}
           <circle cx="200" cy="288" r="3.5" fill="#E2C98A" className="animate-ping" style={{ animationDuration: '3s' }} />

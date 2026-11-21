@@ -3,8 +3,23 @@ import { siteConfig } from '@/config/site';
 
 export const runtime = 'edge';
 
+// Bundled from public/brand/unchartered-wordmark.png (the single brand wordmark asset)
+const wordmarkData = fetch(
+  new URL('../../../../public/brand/unchartered-wordmark.png', import.meta.url)
+).then((res) => res.arrayBuffer());
+
+function toDataUrl(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return `data:image/png;base64,${btoa(binary)}`;
+}
+
 export async function GET(request: Request) {
   try {
+    const wordmarkDataUrl = toDataUrl(await wordmarkData);
     const { searchParams } = new URL(request.url);
     const title = searchParams.get('title') || siteConfig.brandName;
     const subtitle = searchParams.get('subtitle') || siteConfig.tagline;
@@ -36,36 +51,10 @@ export async function GET(request: Request) {
               width: '100%',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: '2px solid #C6A15B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#C6A15B',
-                  fontSize: '20px',
-                  fontWeight: 800,
-                  fontFamily: 'sans-serif',
-                }}
-              >
-                U
-              </div>
-              <span
-                style={{
-                  color: '#F8FAFC',
-                  fontSize: '24px',
-                  letterSpacing: '2px',
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  fontFamily: 'sans-serif',
-                }}
-              >
-                {siteConfig.shortName}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {/* Gold UNCHARTERED — LEGENDS & LEGACIES wordmark (6.25:1) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={wordmarkDataUrl} width={300} height={48} alt={siteConfig.brandName} />
             </div>
 
             <div

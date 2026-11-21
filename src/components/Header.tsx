@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, Search } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { SearchBar } from './SearchBar';
+import { BrandWordmark } from './brand/BrandWordmark';
 
 interface HeaderProps {
   customLogoUrl?: string | null;
@@ -29,10 +29,8 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Normalize brand display: if brandNameOverride contains full title with colon or dash, extract main title
-  const cleanMainBrand = brandNameOverride
-    ? brandNameOverride.replace(/[:—\s]+Legends & Legacies/i, '').trim()
-    : siteConfig.shortName;
+  // Accessible name for the logo image (brand name from Settings when available)
+  const brandAlt = brandNameOverride || siteConfig.brandName;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#101C2C]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
@@ -46,30 +44,15 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
               className="flex items-center gap-3 group focus:outline-none"
               aria-label={`${siteConfig.brandName} - Home`}
             >
-              {customLogoUrl ? (
-                <Image
+              {/* Gold wordmark (uploaded Settings logo takes precedence); ~200px mobile → ~263px desktop */}
+              <span className="flex items-center max-w-[58vw] sm:max-w-none">
+                <BrandWordmark
                   src={customLogoUrl}
-                  alt={siteConfig.brandName}
-                  width={140}
-                  height={36}
-                  unoptimized
-                  className="h-9 w-auto object-contain"
+                  alt={brandAlt}
+                  priority
+                  className="h-8 sm:h-9 lg:h-10 xl:h-[42px]"
                 />
-              ) : (
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF67] to-[#B89248] flex items-center justify-center font-serif text-white font-extrabold text-xl shadow-md border border-white/20">
-                    U
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-editorial text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-[#C6A15B] transition-colors leading-none">
-                      {cleanMainBrand}
-                    </span>
-                    <span className="text-[10px] tracking-[0.24em] uppercase text-[#C6A15B] font-bold mt-1">
-                      Legends &amp; Legacies
-                    </span>
-                  </div>
-                </div>
-              )}
+              </span>
             </Link>
 
             {/* Publisher Attribution Badge */}

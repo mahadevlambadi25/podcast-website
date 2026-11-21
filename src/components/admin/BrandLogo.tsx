@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import { BrandWordmark, BRAND_ICON_SRC } from '@/components/brand/BrandWordmark';
 
 interface BrandLogoProps {
   collapsed?: boolean;
@@ -7,14 +8,13 @@ interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-// Brand assets (shared with the public site):
-// - Wordmark: public/brand/unchartered-wordmark.png (1000x160, transparent)
-// - Icon mark: src/app/icon.png, served by Next.js at /icon.png (512x512, transparent)
-const WORDMARK_SRC = '/brand/unchartered-wordmark.png';
-const WORDMARK_RATIO = 1000 / 160;
-const ICON_SRC = '/icon.png';
-
-const WORDMARK_HEIGHT = { sm: 22, md: 26, lg: 44, xl: 56 } as const;
+// Wordmark heights; width follows the 6.25:1 aspect ratio
+const WORDMARK_HEIGHT_CLASS = {
+  sm: 'h-[22px]', // ~138px wide
+  md: 'h-[26px]', // ~163px wide — admin sidebar
+  lg: 'h-11', //     ~275px wide — admin login
+  xl: 'h-14', //     ~350px wide
+} as const;
 const ICON_SIZE = { sm: 24, md: 36, lg: 44, xl: 56 } as const;
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
@@ -23,12 +23,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
 }) => {
   if (collapsed) {
+    // The full wordmark doesn't fit the collapsed sidebar, so show the gold buildings icon
     const iconSize = ICON_SIZE[size];
     return (
       <div className={`flex items-center select-none ${className}`}>
         <Image
           key="brand-icon"
-          src={ICON_SRC}
+          src={BRAND_ICON_SRC}
           alt="Unchartered"
           width={iconSize}
           height={iconSize}
@@ -41,23 +42,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     );
   }
 
-  const height = WORDMARK_HEIGHT[size];
-  const width = Math.round(height * WORDMARK_RATIO);
-
   return (
-    <div className={`flex flex-col items-start leading-none select-none ${className}`}>
-      <Image
-        key="brand-wordmark"
-        src={WORDMARK_SRC}
-        alt="Unchartered: Legends & Legacies"
-        width={width}
-        height={height}
-        unoptimized
-        priority
-        className="object-contain max-w-full h-auto"
-        style={{ width, maxWidth: '100%' }}
-      />
-      <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px] self-center">
+    <div className={`flex flex-col items-center leading-none select-none ${className}`}>
+      <BrandWordmark key="brand-wordmark" priority className={WORDMARK_HEIGHT_CLASS[size]} />
+      <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px]">
         Editorial Portal
       </span>
     </div>
