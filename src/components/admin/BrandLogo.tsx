@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import { BrandLockup, BRAND_ICON_SRC } from '@/components/brand/BrandWordmark';
 
 interface BrandLogoProps {
   collapsed?: boolean;
@@ -7,14 +8,16 @@ interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-// Brand assets (shared with the public site):
-// - Wordmark: public/brand/unchartered-wordmark.png (1000x160, transparent)
-// - Icon mark: src/app/icon.png, served by Next.js at /icon.png (512x512, transparent)
-const WORDMARK_SRC = '/brand/unchartered-wordmark.png';
-const WORDMARK_RATIO = 1000 / 160;
-const ICON_SRC = '/icon.png';
-
-const WORDMARK_HEIGHT = { sm: 22, md: 26, lg: 44, xl: 56 } as const;
+// Icon + wordmark sizes; wordmark width follows its 6.25:1 aspect ratio
+const LOCKUP_SIZES = {
+  // ~24 + 8 + 138px
+  sm: { icon: 'h-6 w-6', wordmark: 'h-[22px]', gap: 'gap-2' },
+  // ~30 + 8 + 138px — admin sidebar (264px wide, next to the collapse button)
+  md: { icon: 'h-[30px] w-[30px]', wordmark: 'h-[22px]', gap: 'gap-2' },
+  // ~28 + 10 + 175px on phones, ~34 + 12 + 200px from 640px — admin login
+  lg: { icon: 'h-7 w-7 sm:h-[34px] sm:w-[34px]', wordmark: 'h-7 sm:h-8', gap: 'gap-2.5 sm:gap-3' },
+  xl: { icon: 'h-14 w-14', wordmark: 'h-14', gap: 'gap-3' },
+} as const;
 const ICON_SIZE = { sm: 24, md: 36, lg: 44, xl: 56 } as const;
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
@@ -23,12 +26,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
 }) => {
   if (collapsed) {
+    // The full lockup doesn't fit the collapsed sidebar, so show the gold buildings icon only
     const iconSize = ICON_SIZE[size];
     return (
       <div className={`flex items-center select-none ${className}`}>
         <Image
           key="brand-icon"
-          src={ICON_SRC}
+          src={BRAND_ICON_SRC}
           alt="Unchartered"
           width={iconSize}
           height={iconSize}
@@ -41,26 +45,21 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     );
   }
 
-  const height = WORDMARK_HEIGHT[size];
-  const width = Math.round(height * WORDMARK_RATIO);
-
+  const s = LOCKUP_SIZES[size];
   return (
-    <div className={`flex flex-col items-start leading-none select-none ${className}`}>
-      <Image
-        key="brand-wordmark"
-        src={WORDMARK_SRC}
-        alt="Unchartered: Legends & Legacies"
-        width={width}
-        height={height}
-        unoptimized
-        priority
-        className="object-contain max-w-full h-auto"
-        style={{ width, maxWidth: '100%' }}
-      />
-      <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px] self-center">
-        Editorial Portal
-      </span>
-    </div>
+    <BrandLockup
+      key="brand-lockup"
+      priority
+      className={`select-none ${className}`}
+      gapClassName={s.gap}
+      iconClassName={s.icon}
+      wordmarkClassName={s.wordmark}
+      wordmarkCaption={
+        <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B] mt-[5px]">
+          Editorial Portal
+        </span>
+      }
+    />
   );
 };
 

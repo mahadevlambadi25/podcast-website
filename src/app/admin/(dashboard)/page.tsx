@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { getDashboardMetrics } from '@/services/metrics.service';
 import { Badge } from '@/components/ui/badge';
+import { BrandLockup } from '@/components/brand/BrandWordmark';
 import { PageHeader } from '@/components/layout/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -82,8 +83,15 @@ export default async function AdminDashboardPage() {
               <Sparkles className="w-3.5 h-3.5" />
               <span>Editorial Command Center</span>
             </div>
-            <h1 className="text-2xl lg:text-3xl font-serif font-bold text-white tracking-tight">
-              Unchartered — Legends & Legacies
+            <h1 className="flex mb-2">
+              <span className="sr-only">Unchartered — Legends & Legacies</span>
+              <BrandLockup
+                decorative
+                priority
+                gapClassName="gap-2.5 lg:gap-3"
+                iconClassName="h-7 w-7 sm:h-[30px] sm:w-[30px] lg:h-[34px] lg:w-[34px]"
+                wordmarkClassName="h-7 sm:h-[30px] lg:h-8"
+              />
             </h1>
             <p className="mt-1 text-sm text-slate-300 max-w-xl">
               Curate executive leadership interviews, manage guest profiles, schedule broadcast releases, and review audience submissions.

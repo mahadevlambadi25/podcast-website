@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { PrivacySettingsButton } from './PrivacySettingsButton';
+import { BrandLockup } from './brand/BrandWordmark';
 
 interface FooterProps {
   socialsOverride?: {
@@ -22,19 +23,13 @@ export function Footer({ socialsOverride }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand Column */}
           <div data-reveal data-reveal-delay="1" className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF67] to-[#B89248] flex items-center justify-center font-serif text-white font-extrabold text-xl shadow-md border border-white/20">
-                U
-              </div>
-              <div className="flex flex-col">
-                <span className="font-editorial text-2xl font-bold tracking-tight text-white leading-none">
-                  {siteConfig.shortName}
-                </span>
-                <span className="text-[10px] tracking-[0.24em] uppercase text-[#C6A15B] font-bold mt-1">
-                  Legends &amp; Legacies
-                </span>
-              </div>
-            </div>
+            <Link href="/" className="inline-flex items-center" aria-label={`${siteConfig.brandName} - Home`}>
+              <BrandLockup
+                gapClassName="gap-2.5 sm:gap-3"
+                iconClassName="h-7 w-7 sm:h-[30px] sm:w-[30px]"
+                wordmarkClassName="h-7 sm:h-[30px]"
+              />
+            </Link>
             <p className="text-sm text-[#8E9CAE] max-w-md leading-relaxed">
               {siteConfig.tagline}
             </p>

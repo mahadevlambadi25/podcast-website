@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ArrowUpRight, Search } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { SearchBar } from './SearchBar';
+import { BrandLockup } from './brand/BrandWordmark';
 
 interface HeaderProps {
   customLogoUrl?: string | null;
@@ -29,10 +29,8 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Normalize brand display: if brandNameOverride contains full title with colon or dash, extract main title
-  const cleanMainBrand = brandNameOverride
-    ? brandNameOverride.replace(/[:—\s]+Legends & Legacies/i, '').trim()
-    : siteConfig.shortName;
+  // Accessible name for the logo image (brand name from Settings when available)
+  const brandAlt = brandNameOverride || siteConfig.brandName;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#101C2C]/95 backdrop-blur-md border-b border-white/10 shadow-lg">
@@ -46,34 +44,21 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
               className="flex items-center gap-3 group focus:outline-none"
               aria-label={`${siteConfig.brandName} - Home`}
             >
-              {customLogoUrl ? (
-                <Image
-                  src={customLogoUrl}
-                  alt={siteConfig.brandName}
-                  width={140}
-                  height={36}
-                  unoptimized
-                  className="h-9 w-auto object-contain"
-                />
-              ) : (
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF67] to-[#B89248] flex items-center justify-center font-serif text-white font-extrabold text-xl shadow-md border border-white/20">
-                    U
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-editorial text-xl sm:text-2xl font-bold tracking-tight text-white group-hover:text-[#C6A15B] transition-colors leading-none">
-                      {cleanMainBrand}
-                    </span>
-                    <span className="text-[10px] tracking-[0.24em] uppercase text-[#C6A15B] font-bold mt-1">
-                      Legends &amp; Legacies
-                    </span>
-                  </div>
-                </div>
-              )}
+              {/* Gold buildings icon + wordmark (uploaded Settings logo replaces the wordmark).
+                  Phones 22→26→28px icon / 138→163→175px wordmark; 640px 32/200;
+                  tablet 24/150; 1024px 30/188; 1280px+ 34/200 */}
+              <BrandLockup
+                wordmarkSrc={customLogoUrl}
+                alt={brandAlt}
+                priority
+                gapClassName="gap-1.5 min-[360px]:gap-2 sm:gap-2.5 md:gap-2 lg:gap-3"
+                iconClassName="h-[22px] w-[22px] min-[360px]:h-[26px] min-[360px]:w-[26px] min-[400px]:h-7 min-[400px]:w-7 sm:h-8 sm:w-8 md:h-6 md:w-6 lg:h-[30px] lg:w-[30px] xl:h-[34px] xl:w-[34px]"
+                wordmarkClassName="h-[22px] min-[360px]:h-[26px] min-[400px]:h-7 sm:h-8 md:h-6 lg:h-[30px] xl:h-8"
+              />
             </Link>
 
             {/* Publisher Attribution Badge */}
-            <div className="hidden lg:flex items-center gap-1.5 pl-3 border-l border-white/15 text-xs text-[#8E9CAE]">
+            <div className="hidden xl:flex items-center gap-1.5 pl-3 border-l border-white/15 text-xs text-[#8E9CAE]">
               <span>by</span>
               <a
                 href={siteConfig.publisher.url}
@@ -88,12 +73,12 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
           </div>
 
           {/* Desktop Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-sm lg:max-w-md mx-4">
+          <div className="hidden md:flex flex-1 min-w-[88px] max-w-sm lg:max-w-md ml-1 mr-3 lg:mx-4">
             <SearchBar isHeader placeholder="Search guests, episodes, topics..." />
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1.5 lg:gap-2">
+          <nav className="hidden md:flex items-center shrink-0 gap-1 lg:gap-2">
             {siteConfig.nav.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
               const isNominate = item.href === '/nominate-a-leader';
@@ -104,7 +89,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                     key={item.href}
                     href={item.href}
                     prefetch={true}
-                    className="ml-2 px-4 py-2 rounded-xl neu-btn-gold text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="ml-1 lg:ml-2 px-3 lg:px-4 py-2 rounded-xl neu-btn-gold whitespace-nowrap text-xs tracking-wider uppercase transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     {item.label}
                   </Link>
@@ -116,7 +101,7 @@ export function Header({ customLogoUrl, brandNameOverride }: HeaderProps) {
                   key={item.href}
                   href={item.href}
                   prefetch={true}
-                  className={`px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider font-semibold transition-all ${
+                  className={`px-2 lg:px-3.5 py-2 rounded-xl whitespace-nowrap text-xs uppercase tracking-wider font-semibold transition-all ${
                     isActive
                       ? 'bg-white/10 text-[#C6A15B] font-bold border border-[#C6A15B]/30'
                       : 'text-[#DFE3E8] hover:text-white hover:bg-white/5'
