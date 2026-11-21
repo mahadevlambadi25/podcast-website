@@ -1,0 +1,75 @@
+# Production stack for the Contabo VPS.
+# The server's existing host nginx proxies to the app on 127.0.0.1:3100
+# (see deploy/nginx-podcast.conf). Postgres is only on the private Docker network.
+#
+# Run with:  docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+
+name: podcast
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: unchartered
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: unchartered
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U unchartered -d unchartered']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?Set NEXT_PUBLIC_SITE_URL in .env.production}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # sslmode=disable: Postgres is on the private Docker network, no TLS needed
+      DATABASE_URL: postgresql://unchartered:${POSTGRES_PASSWORD}@postgres:5432/unchartered?sslmode=disable
+      MEDIA_STORAGE_DIR: /var/data/media
+      S3_ENABLED: 'false'
+    ports:
+      - '127.0.0.1:3100:3000'
+    volumes:
+      - media:/var/data/media
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Publishes scheduled episodes every 10 minutes
+  cron:
+    image: curlimages/curl:8.11.1
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET in .env.production}
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        while true; do
+          sleep 600
+          curl -fsS -X POST http://app:3000/api/cron/publish \
+            -H "Authorization: Bearer $$CRON_SECRET" || echo "cron publish failed"
+          echo
+        done
+
+volumes:
+  pgdata:
+  media:

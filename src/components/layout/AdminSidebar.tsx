@@ -172,8 +172,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = (props) => {
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
       {/* Top Brand Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/[0.08] shrink-0">
-        <Link href="/admin" className="flex items-center overflow-hidden">
+      <div
+        className={`h-16 flex items-center justify-between border-b border-white/[0.08] shrink-0 ${
+          isCollapsed ? 'px-2 gap-1' : 'px-4'
+        }`}
+      >
+        <Link href="/admin" className="flex items-center overflow-hidden shrink-0">
           <BrandLogo collapsed={isCollapsed} size={isCollapsed ? 'sm' : 'md'} />
         </Link>
         <button

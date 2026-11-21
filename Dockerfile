@@ -16,6 +16,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DOCKER_BUILD=1
 
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
+
 # Run application build (database initialization & migrations run at runtime via CMD)
 RUN npm run build
 
