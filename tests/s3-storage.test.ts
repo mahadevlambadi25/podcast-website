@@ -22,6 +22,9 @@ import {
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 
+// Committed fixture directory (the real /media folder is git-ignored and absent in CI)
+const FIXTURE_MEDIA_DIR = path.resolve(__dirname, 'fixtures', 'media');
+
 describe('AWS S3 Media Storage Integration Suite', () => {
   const originalEnv = process.env;
 
@@ -354,7 +357,8 @@ describe('AWS S3 Media Storage Integration Suite', () => {
       notFoundErr.name = 'NoSuchKey';
       vi.spyOn(S3Client.prototype, 'send').mockRejectedValue(notFoundErr);
 
-      // Local placeholder file exists
+      // Local placeholder file exists (committed test fixture; /media is git-ignored)
+      process.env.MEDIA_STORAGE_DIR = FIXTURE_MEDIA_DIR;
       const resolved = await resolveMediaFile('portrait-placeholder.svg');
       expect(resolved).not.toBeNull();
       expect(resolved!.source).toBe('disk');
@@ -397,6 +401,7 @@ describe('AWS S3 Media Storage Integration Suite', () => {
   describe('6. Local Development & Backward Compatibility', () => {
     it('finds existing local placeholder files without S3', () => {
       process.env.S3_ENABLED = 'false';
+      process.env.MEDIA_STORAGE_DIR = FIXTURE_MEDIA_DIR;
       const file = findMediaFile('portrait-placeholder.svg');
       expect(file).not.toBeNull();
     });
